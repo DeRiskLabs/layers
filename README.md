@@ -1,35 +1,504 @@
 # Layers
 
-TODO: Delete this and the text below, and describe your gem
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/layers`. To experiment with that code, run `bin/console` for an interactive prompt.
+A Ruby gem for building clean, maintainable applications using a layered architecture.
+Layers helps you separate business logic from framework code using message-passing and
+clear boundaries.
+
+## Overview
+
+Layers provides a structured way to organize Ruby applications following clean
+architecture principles:
+
+- **Clear boundaries**: separate your application into distinct layers with well-defined
+  responsibilities
+- **Message passing**: layers report outcomes by calling back a listener with a
+  consistent success/failure protocol, instead of returning values for callers to
+  interpret
+- **Framework independence**: business logic stays free of framework dependencies, so
+  the same object serves REST controllers, GraphQL endpoints, background jobs, and tests
+  unchanged
+- **Testability**: every layer is a plain Ruby object with declared inputs and
+  observable outcomes
+
+The gem provides four building blocks:
+
+| Class | Purpose |
+| --- | --- |
+| `Layers::BaseLayer` | Base class for use cases, user stories, and other business operations |
+| `Layers::BaseQueryObject` | Base class for scoped, chainable read objects |
+| `Layers::Result` | A success/failure value object for return-value style flows |
+| `Layers::Graphql::BaseEndpoint` | Declarative GraphQL mutation/resolver integration |
+
+## Requirements
+
+- Ruby >= 3.1
+- `activesupport` >= 7.0 and `naught` (installed automatically)
+- An ActiveRecord-compatible relation if you use `Layers::BaseQueryObject`
+- The `graphql` gem if you use `Layers::Graphql::BaseEndpoint`
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+The gem is distributed from a private git source. Add to your Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem 'layers', git: 'git@github.com:richardjordan/layers.git', tag: 'v1.0.0'
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Then run:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+$ bundle install
 ```
 
-## Usage
+## Core Concepts
 
-TODO: Write usage instructions here
+### The layer lifecycle
+
+Every layer object follows the same lifecycle:
+
+1. **Instantiate** with declared inputs (and optionally a listener and callbacks)
+2. **Execute** business logic in `#call`
+3. **Report** the outcome with `success(...)` or `failure(...)`, which notifies
+   observers and calls the listener back
+
+Because `Layers::DSL::ClassCallable` is included, the whole lifecycle is one call:
+
+```ruby
+UseCases::Members::CreateSeller.call(identity: identity)
+```
+
+is equivalent to `UseCases::Members::CreateSeller.new(identity: identity).call`.
+
+### The message protocol
+
+Inside `#call`, report the outcome — do not return it:
+
+- `success(**args)` — marks the layer succeeded, notifies success observers, then calls
+  the success callback on the listener with `args`
+- `failure(**args)` — marks the layer failed, notifies failure observers, then calls
+  the failure callback on the listener with `args`
+
+After execution the layer also answers `success?`, `failure?`, and exposes the reported
+args as `result`.
+
+### Recommended base classes
+
+Applications normally define their own base classes over the gem, one per layer type:
+
+```ruby
+class BaseUseCase < Layers::BaseLayer
+end
+
+class BaseUserStory < Layers::BaseLayer
+end
+```
+
+- **Use cases** (`UseCases::*`) perform a single transactional write
+- **User stories** (`UserStories::*`) orchestrate a user-facing action: they coordinate
+  use cases, forms, and query objects
+
+## Defining a Layer
+
+### Declaring inputs
+
+Declare what the layer needs with the inputs DSL. Each declaration creates an accessor:
+
+```ruby
+class UseCases::Members::CreateSeller < BaseUseCase
+  required :identity                       # must be provided
+  optional :referrer                       # may be provided
+  optional_with_default role: :seller      # defaults when not provided
+end
+```
+
+Input validation happens at construction:
+
+- a missing required input raises `Layers::DSL::MissingRequiredInputs`
+- an undeclared input raises `Layers::DSL::UnexpectedInputs`
+
+Instances expose `inputs` (the raw hash), and `attributes`, `required_attributes`, and
+`optional_attributes` (declared inputs with their current values).
+
+### Implementing #call
+
+`#call` holds the business logic and reports through the message protocol:
+
+```ruby
+module UseCases
+  module Members
+    class CreateSeller < BaseUseCase
+      required :identity
+
+      def call
+        return failure(seller: identity) unless create_seller
+
+        success(seller: identity)
+
+      rescue ActiveRecord::RecordInvalid => e
+        log_failure(e)
+      end
+
+      private
+
+      def create_seller
+        ActiveRecord::Base.transaction do
+          business = Business.create!(owner: identity)
+
+          Auth.grant_role identity, role: :seller
+          Auth.grant_role identity, role: :owner, on: business
+        end
+      end
+
+      def log_failure(e)
+        Rails.logger.error "Failed to create Seller for identity '#{identity.uuid}': #{e.message}"
+        failure(seller: identity)
+      end
+    end
+  end
+end
+```
+
+A layer that does not implement `#call` raises `NotImplementedError` when called.
+
+### Listeners and callbacks
+
+The caller passes itself as the listener; the layer calls back on success or failure:
+
+```ruby
+UseCases::Members::CreateSeller.call(
+  identity: identity,
+  listener: self,
+  on_success: :create_succeeded,
+  on_failure: :create_failed,
+)
+```
+
+- `listener:` — the object to call back (defaults to a null listener that silently
+  swallows every message, so layers can run fire-and-forget)
+- `on_success:` / `on_failure:` — the listener methods to call (default to `:on_success`
+  and `:on_failure`)
+
+A class can change its own callback defaults:
+
+```ruby
+class BaseUseCase < Layers::BaseLayer
+  default_callbacks on_failure: :use_case_failed,
+                    on_success: :use_case_succeeded
+end
+```
+
+### Observers
+
+Observers handle side effects of an outcome without coupling the layer to them.
+Register instance methods (or callables) per event; they run before the listener
+callback:
+
+```ruby
+module UserStories
+  module Members
+    class Register < BaseUserStory
+      required :registration
+      observer :build_business_relationships, of_event: :success
+
+      delegate :email, :identity, :interests, :email_address,
+               :password, :password_confirmation, :user_account,
+               to: :registration
+
+      def call
+        return failure(registration: registration) unless valid?
+
+        email_address.identity = identity
+        email_address.acts_as_primary = true
+        user_account.identity = identity
+
+        return fail_with_object_errors unless persist
+
+        success(registration: registration)
+      end
+
+      private
+
+      def persist
+        ActiveRecord::Base.transaction do
+          identity.save!
+          email_address.save!
+          user_account.save!
+        end
+        true
+      rescue ActiveRecord::RecordInvalid
+        false
+      end
+
+      def build_business_relationships
+        UseCases::Members::CreateAdvisor.call(identity: identity) if advisor?
+        UseCases::Members::CreateSeller.call(identity: identity) if seller?
+      end
+
+      def advisor?
+        interests.include?('advisor')
+      end
+
+      def seller?
+        interests.include?('seller')
+      end
+    end
+  end
+end
+```
+
+`observer` defaults to `of_event: :success`; use `of_event: :failure` for failure-side
+effects. An exception raised by an observer never breaks the layer: it is logged (see
+[Configuration and Logging](#configuration-and-logging)), and you can register a handler
+for it:
+
+```ruby
+observer_exception_handler :handle_observer_error
+```
+
+### Controller integration
+
+The listener pattern keeps controllers thin — they translate HTTP and render:
+
+```ruby
+module Members
+  class RegistrationsController < ApplicationController
+    def create
+      UserStories::Members::Register.call(
+        registration: registration,
+        listener: self,
+        on_success: :create_succeeded,
+        on_failure: :create_failed,
+      )
+    end
+
+    def create_succeeded(registration:)
+      session[:user_account_id] = registration.user_account.signed_id(
+        purpose: :auth,
+        expires_in: 12.hours,
+      )
+      flash[:success] = I18n.t('members.registrations.success')
+      redirect_to dashboard_path
+    end
+
+    def create_failed(registration: nil, error: nil)
+      flash[:alert] = error_messages_for_failed(registration)
+      redirect_to signup_path
+    end
+  end
+end
+```
+
+## Query Objects
+
+`Layers::BaseQueryObject` extracts reads from models into scoped, chainable objects.
+Subclasses declare their model and build their default scope:
+
+```ruby
+module Queries
+  class ArticlesQuery < Layers::BaseQueryObject
+    relation_class :article
+
+    private
+
+    def build_relation_defaults!
+      @relation = relation.where(published: true)
+    end
+  end
+end
+```
+
+- `relation_class` names the model that provides the initial relation. It takes a
+  symbol/string (camelized and constantized) or a callable returning the class name; a
+  name that does not constantize raises `Layers::QueryBuilder::ConfigurationError`.
+- `build_relation_defaults!` is the subclass contract: apply the query's default
+  scoping there. The base class raises `NotImplementedError` without it.
+
+Construct with an explicit relation, a `relation:` option, or nothing (falls back to
+the declared `relation_class`):
+
+```ruby
+Queries::ArticlesQuery.new                            # Article scoped by the defaults
+Queries::ArticlesQuery.new(current_user.articles)     # an explicit starting relation
+Queries::ArticlesQuery.new(relation: some_relation)   # option form (wins over the argument)
+```
+
+A relation must be an `ActiveRecord::Relation` or a model class; anything else raises
+`Layers::BaseQueryObject::RelationError`. The original relation stays available as
+`unscoped_relation`.
+
+### Reading and chaining
+
+Common read messages (`all`, `count`, `find`, `find_by`, `first`, `where`, `pluck`,
+`includes`, `joins`, and friends) are delegated straight to the relation. Refining
+methods mutate the internal relation and return the query itself, so they chain:
+
+```ruby
+query = Queries::ArticlesQuery.new
+query.order(sort_field: :title, sort_direction: :asc).page(2).per(25).all
+```
+
+- `order(sort_field: :created_at, sort_direction: :desc)` — defaults shown
+- `page(n)` then `per(size)` — pagination; the relation must respond to `page` and
+  `per_page`. Calling `per` before `page` raises
+  `Layers::QueryBuilder::PaginationError`.
+
+## Results
+
+`Layers::Result` is a value object for flows where you want an inspectable outcome
+instead of (or alongside) listener callbacks:
+
+```ruby
+result = Layers::Result.success(order, { source: 'checkout' })
+result = Layers::Result.failure('Card declined')
+
+result.success?    # => true / false
+result.failure?    # => the opposite
+result.value       # => the success payload
+result.errors      # => always an array; strings, exceptions, and single values are normalized
+result.metadata    # => the metadata hash
+result.to_h        # => { success:, value:/errors:, metadata: }
+```
+
+Results chain:
+
+```ruby
+Layers::Result.success(params)
+  .and_then { |params| build_order(params) }     # runs only on success
+  .and_then { |order| charge(order) }            # a raised error becomes a failure result
+  .on_success { |charge| notify(charge) }        # tap-style; returns self
+  .on_failure { |errors| log(errors) }           # tap-style; returns self
+```
+
+`and_then` passes the value to the block. A block returning a `Result` is used as-is;
+any other return value is wrapped in a success carrying the metadata forward; a raised
+`StandardError` becomes a failure with the exception class recorded in the metadata.
+
+## GraphQL Endpoints
+
+`Layers::Graphql::BaseEndpoint` connects GraphQL mutations and resolvers to user
+stories declaratively. Include it in your GraphQL base class:
+
+```ruby
+module Graph
+  class BaseMutation < GraphQL::Schema::Mutation
+    include Layers::Graphql::BaseEndpoint
+  end
+end
+```
+
+Then a mutation names its user story, maps its arguments, and renders the callbacks:
+
+```ruby
+module Graph
+  module Mutations
+    class RegisterMember < BaseMutation
+      user_story 'user_stories/members/register'
+      user_story_arg :registration, method: :build_registration
+
+      argument :email, String, required: true
+
+      field :member, Types::MemberType, null: true
+      field :errors, [String], null: false
+
+      def on_success(registration:)
+        { member: registration.identity, errors: [] }
+      end
+
+      def on_failure(registration: nil, error: nil)
+        { member: nil, errors: Array(error) }
+      end
+
+      private
+
+      def build_registration
+        Registration.new(initial_resolve_args)
+      end
+    end
+  end
+end
+```
+
+How `resolve` works:
+
+1. If the GraphQL `context` already has errors, it returns without running anything.
+2. The resolver's arguments are captured as `initial_resolve_args`.
+3. Each `user_story_arg` is resolved by calling the named method (`method:` option) or
+   a method matching the arg name, and merged over the resolve args.
+4. The user story is called with the endpoint as listener
+   (`on_success: :success, on_failure: :failure`), which dispatches to your
+   `on_success`/`on_failure` methods.
+5. Any error raised along the way is re-raised as `GraphQL::ExecutionError`.
+
+Configuration mistakes fail loudly: a missing or non-constantizable `user_story` raises
+`InvalidUserStory`; a `user_story_arg` without a backing method raises
+`InvalidUserStoryArgumentMethod`; both surface through `GraphQL::ExecutionError` with
+explanatory messages. Endpoints that do not define `on_success`/`on_failure` raise
+`NotImplementedError`.
+
+## Configuration and Logging
+
+The gem logs through `Layers::Logger.logger`, which resolves in order:
+
+1. A configured logger:
+
+   ```ruby
+   Layers.configure do |config|
+     config.logger = SemanticLogger['layers']
+   end
+   ```
+
+2. `Rails.logger`, when Rails is present outside production
+3. Its own file logger writing to `log/layers.log`
+
+## Best Practices
+
+### Layer organization
+
+1. Keep layers focused and single-purpose
+2. Use user stories for framework integration and orchestration
+3. Put core business logic in use cases
+4. Use observers for side effects
+
+### Error handling
+
+1. Use the failure/success protocol consistently
+2. Include meaningful error messages
+3. Log errors appropriately
+4. Handle all error cases explicitly
+
+### Testing
+
+1. Test each layer in isolation
+2. Mock dependencies in unit tests
+3. Write integration tests for user stories
+4. Test both success and failure paths
+
+## Error Reference
+
+| Error | Raised when |
+| --- | --- |
+| `Layers::Error` | Base class for all gem errors (`< StandardError`) |
+| `Layers::DSL::MissingRequiredInputs` | A required input was not provided (`< ArgumentError`) |
+| `Layers::DSL::UnexpectedInputs` | An undeclared input was provided (`< ArgumentError`) |
+| `Layers::DSL::ClassCallable::MissingMethodError` | `.call` hit a `TypeError` caused by a missing method — usually a broken delegation |
+| `Layers::BaseQueryObject::RelationError` | A query object was built with something that is not a relation or model class |
+| `Layers::QueryBuilder::ConfigurationError` | `relation_class` did not constantize to a model |
+| `Layers::QueryBuilder::PaginationError` | `per` was called before `page` |
+| `Layers::Graphql::BaseEndpoint::InvalidUserStory` | No `user_story` declared, or it did not constantize |
+| `Layers::Graphql::BaseEndpoint::InvalidUserStoryArgumentMethod` | A `user_story_arg` has no backing method |
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+After checking out the repo:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```bash
+$ bin/setup
+$ bundle exec rspec
+```
 
-## Contributing
+## License
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/layers.
+This project is licensed under the MIT License — see [LICENSE.txt](LICENSE.txt) for
+details.
