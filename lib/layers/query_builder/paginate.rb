@@ -1,7 +1,15 @@
+# frozen_string_literal: true
+
 module Layers
+
   module QueryBuilder
+
     class PaginationError < Layers::Error; end
 
+    # The Paginate module provides chainable pagination for query objects.
+    #
+    # The page method must be called before per; the underlying relation must
+    # respond to page and per_page.
     module Paginate
 
       def page(page)
@@ -20,11 +28,12 @@ module Layers
           self
         else
           error = 'Cannot set page size on an unpaginated query.'
-          raise PaginationError, error
+          fail PaginationError, error
         end
       end
 
     end
-  end
-end
 
+  end
+
+end

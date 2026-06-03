@@ -20,5 +20,7 @@ require 'layers/base_query_object'
 
 require 'layers/graphql/base_endpoint'
 
+# The Layers module is the main namespace for the Layers gem.
+# It provides a framework for implementing layered architecture in Ruby applications.
 module Layers
 end

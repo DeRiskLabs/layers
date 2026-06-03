@@ -45,7 +45,7 @@ RSpec.describe Layers::BaseLayer do
       let(:init_args) do
         {
           on_failure: :custom_failure,
-          on_success: :custom_success
+          on_success: :custom_success,
         }
       end
 

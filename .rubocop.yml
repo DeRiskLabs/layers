@@ -1,20 +1,69 @@
-require:
-  - rubocop-rspec
+plugins:
   - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+
+require:
+  - ./.rubocop/cops/layout/private_two_lines.rb
 
 AllCops:
   TargetRubyVersion: 3.1
-  NewCops: enable
+  NewCops: disable
   Exclude:
     - 'bin/**/*'
     - 'vendor/**/*'
     - 'tmp/**/*'
     - 'coverage/**/*'
 
-Style/Documentation:
+# Custom cops
+
+Layout/PrivateTwoLines:
   Enabled: true
 
+# Whitespace is deliberate — keep it the author's way
+
+Layout/EmptyLines:
+  Enabled: false
+
+Layout/EmptyLineBetweenDefs:
+  Enabled: false
+
+Layout/EmptyLinesAroundClassBody:
+  EnforcedStyle: empty_lines
+
+Layout/EmptyLinesAroundModuleBody:
+  EnforcedStyle: empty_lines
+
+Layout/EmptyLinesAroundExceptionHandlingKeywords:
+  Enabled: false
+
+Layout/EmptyLineAfterGuardClause:
+  Enabled: false
+
+# A blank line after the final inclusion in a list, not after each one
+
+Layout/EmptyLinesAfterModuleInclusion:
+  Enabled: true
+  Exclude:
+    - 'spec/**/*'
+
+Layout/LineLength:
+  Max: 100
+
+# fail to signal a new exception, raise to re-raise
+
+Style/SignalException:
+  EnforcedStyle: semantic
+
+# Constant-base prefixes disambiguate shadowed names (Layers::Logger vs ::Logger)
+
+Style/RedundantConstantBase:
+  Enabled: false
+
 Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/StringLiteralsInInterpolation:
   EnforcedStyle: single_quotes
 
 Style/SymbolArray:
@@ -23,53 +72,63 @@ Style/SymbolArray:
 Style/WordArray:
   EnforcedStyle: brackets
 
+# Eliminate unnecessary diff: enforce trailing commas on multiline
+
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/Documentation:
+  Exclude:
+    - 'spec/**/*'
+
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
-    - '*.gemspec'
 
 Metrics/MethodLength:
-  Max: 20
+  Max: 12
+  CountComments: false
+  CountAsOne:
+    - heredoc
+    - method_call
 
-Metrics/AbcSize:
-  Max: 20
+# Spec idioms follow the house testing style, not RSpec cop defaults
 
-Layout/LineLength:
-  Max: 100
+RSpec/DescribedClass:
+  Enabled: false
+
+RSpec/HookArgument:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/LeadingSubject:
+  Enabled: false
+
+RSpec/LetBeforeExamples:
+  Enabled: false
+
+RSpec/SubjectStub:
+  Enabled: false
+
+RSpec/VerifiedDoubles:
+  Enabled: false
+
+RSpec/VerifiedDoubleReference:
+  Enabled: false
 
 RSpec/NestedGroups:
-  Max: 4
+  Enabled: false
 
 RSpec/MultipleMemoizedHelpers:
   Max: 10
 
 RSpec/ExampleLength:
   Max: 10
-
-RSpec/MessageSpies:
-  EnforcedStyle: receive
-
-Style/StringLiteralsInInterpolation:
-  Enabled: true
-  EnforcedStyle: single_quotes
-
-Layout/EmptyLineAfterGuardClause:
-  Enabled: true
-
-Layout/EmptyLinesAroundClassBody:
-  Enabled: true
-  EnforcedStyle: empty_lines
-
-Layout/EmptyLinesAroundModuleBody:
-  Enabled: true
-  EnforcedStyle: empty_lines
-
-Layout/EmptyLinesAroundMethodBody:
-  Enabled: true
-
-Layout/TrailingEmptyLines:
-  Enabled: true
-  EnforcedStyle: final_newline
-
-Layout/TrailingWhitespace:
-  Enabled: true 

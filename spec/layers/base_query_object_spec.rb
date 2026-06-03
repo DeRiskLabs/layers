@@ -3,14 +3,16 @@
 require 'layers_spec_helper'
 
 RSpec.describe Layers::BaseQueryObject do
+  before do
+    stub_const('ActiveRecord::Relation', relation_interface)
+  end
+
   it { expect(described_class.included_modules).to include(Layers::QueryBuilder::RelationDefaults) }
   it { expect(described_class.included_modules).to include(Layers::QueryBuilder::Paginate) }
   it { expect(described_class.included_modules).to include(Layers::QueryBuilder::Sort) }
 
   let(:test_class) do
     Class.new(described_class) do
-      private
-
       def build_relation_defaults!; end
     end
   end
@@ -21,9 +23,6 @@ RSpec.describe Layers::BaseQueryObject do
     end
   end
 
-  before do
-    stub_const('ActiveRecord::Relation', relation_interface)
-  end
 
   describe '#initialize' do
     subject(:query) { test_class.allocate }
@@ -75,8 +74,6 @@ RSpec.describe Layers::BaseQueryObject do
       let(:test_class) do
         Class.new(described_class) do
           relation_class :my_model
-
-          private
 
           def build_relation_defaults!; end
         end

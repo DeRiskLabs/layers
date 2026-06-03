@@ -1,5 +1,16 @@
+# frozen_string_literal: true
+
 module Layers
+
+  # BaseQueryObject is the foundation for scoped, chainable query objects that
+  # extract reads from models.
+  #
+  # Subclasses declare their model with the relation_class DSL and apply their
+  # default scoping in a private build_relation_defaults! method. Common read
+  # messages are delegated to the underlying relation, while refining methods
+  # (order, page, per) mutate the relation and return the query for chaining.
   class BaseQueryObject
+
     class RelationError < Layers::Error; end
 
     include Layers::QueryBuilder::RelationDefaults
@@ -39,12 +50,11 @@ module Layers
     end
 
 
-
     private
 
     def validate_relation!
       return if relation.is_a?(ActiveRecord::Relation) || relation.is_a?(Class)
-      raise RelationError, 'Relation must duck-type to an ActiveRecord::Relation'
+      fail RelationError, 'Relation must duck-type to an ActiveRecord::Relation'
     end
 
     def build_relation_defaults!
@@ -52,5 +62,5 @@ module Layers
     end
 
   end
-end
 
+end

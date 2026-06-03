@@ -91,6 +91,7 @@ module Layers
         end
       end
 
+
       private
 
       def add_default_inputs!
@@ -122,15 +123,15 @@ module Layers
       def validate_required_inputs_present!
         return if missing_inputs.empty?
 
-        raise Layers::DSL::MissingRequiredInputs,
-              "Missing required inputs: #{missing_inputs.join(', ')}"
+        fail Layers::DSL::MissingRequiredInputs,
+             "Missing required inputs: #{missing_inputs.join(', ')}"
       end
 
       def validate_no_unpermitted_inputs!
         return if extra_inputs.empty?
 
-        raise Layers::DSL::UnexpectedInputs,
-              "Undeclared inputs: #{extra_inputs.join(', ')}"
+        fail Layers::DSL::UnexpectedInputs,
+             "Undeclared inputs: #{extra_inputs.join(', ')}"
       end
 
     end

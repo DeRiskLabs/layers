@@ -55,6 +55,7 @@ module Layers
         @observers ||= self.class.observers
       end
 
+
       private
 
       def exception_handler_method

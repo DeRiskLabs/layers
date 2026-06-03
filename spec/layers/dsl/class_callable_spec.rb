@@ -58,7 +58,7 @@ RSpec.describe Layers::DSL::ClassCallable do
             include Layers::DSL::ClassCallable
 
             def call
-              raise TypeError, 'no implicit conversion'
+              fail TypeError, 'no implicit conversion'
             end
           end
         end

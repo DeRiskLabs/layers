@@ -148,7 +148,7 @@ RSpec.describe Layers::Result do
       subject(:result) { described_class.success('value', { source: 'test' }) }
 
       execute(:chained) do
-        result.and_then { raise ArgumentError, 'boom' }
+        result.and_then { fail ArgumentError, 'boom' }
       end
 
       it 'returns a failure result' do

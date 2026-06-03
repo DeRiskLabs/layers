@@ -50,6 +50,7 @@ module Layers
       @succeeded
     end
 
+
     private
 
     def failure(*failure_args, **failure_opts)
@@ -73,5 +74,7 @@ module Layers
       notify_observers(of_event: :success)
       listener.public_send(on_success, *success_args, **success_opts)
     end
+
   end
+
 end

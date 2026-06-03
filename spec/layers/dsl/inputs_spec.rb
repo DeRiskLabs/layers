@@ -214,7 +214,7 @@ RSpec.describe Layers::DSL::Inputs do
         it 'returns optional inputs with values' do
           expect(input_object.optional_attributes).to eq({
                                                            baz: :awesome,
-                                                           qux: nil
+                                                           qux: nil,
                                                          })
         end
       end
@@ -223,7 +223,7 @@ RSpec.describe Layers::DSL::Inputs do
         it 'returns required inputs with values' do
           expect(input_object.required_attributes).to eq({
                                                            foo: true,
-                                                           bar: false
+                                                           bar: false,
                                                          })
         end
       end
@@ -234,7 +234,7 @@ RSpec.describe Layers::DSL::Inputs do
                                                   foo: true,
                                                   bar: false,
                                                   baz: :awesome,
-                                                  qux: nil
+                                                  qux: nil,
                                                 })
         end
       end

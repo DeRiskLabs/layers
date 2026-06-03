@@ -54,7 +54,7 @@ module Layers
       # Enforce the implementation of the call method
 
       def call
-        raise NotImplementedError
+        fail NotImplementedError
       end
 
     end

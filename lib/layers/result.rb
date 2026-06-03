@@ -102,13 +102,13 @@ module Layers
       end
     end
 
+
     private
 
     # Normalize errors to an array
     #
     # @param errors [Array, String, Exception, Object] the error(s) to normalize
     # @return [Array] an array of errors
-    # rubocop:disable Lint/DuplicateBranch
     def normalize_errors(errors)
       case errors
       when nil

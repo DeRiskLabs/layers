@@ -81,7 +81,7 @@ RSpec.describe Layers::DSL::Observers do
 
         def success_method; end
         def failure_method; end
-        def handle_error(e); end
+        def handle_error(error); end
       end
     end
 
