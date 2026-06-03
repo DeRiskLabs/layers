@@ -44,7 +44,7 @@ module Layers
     private
 
     def validate_relation!
-      return if relation.is_a?(ActiveRecord::Relation) || relation.is_a?(Class)
+      return if Layers.configuration.relation_adapter.relation?(relation)
       fail RelationError, 'Relation must duck-type to an ActiveRecord::Relation'
     end
 

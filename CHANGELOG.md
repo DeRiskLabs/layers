@@ -32,6 +32,15 @@ distribution from a private git source.
 - `Layers::Graphql::BaseEndpoint` — declarative `user_story` /
   `user_story_arg` wiring from GraphQL mutations and resolvers to user
   stories, with `GraphQL::ExecutionError` wrapping
+- `Layers::Adapters` — host-integration adapters configured through
+  `Layers.configure`:
+  - pagination adapters (`Kaminari`, `WillPaginate`) with automatic
+    detection, so query objects never know the pagination gem's spelling
+  - relation validation adapters (`ActiveRecord`, `DuckType`) so query
+    objects construct safely whether or not ActiveRecord is loaded
+  - an injectable GraphQL execution error class, detected from the
+    graphql gem when present; using the GraphQL pieces with none
+    available raises `Layers::ConfigurationError`
 - `Layers.configure` and `Layers::Logger` — configurable logging with
   Rails-aware fallbacks
 - Full RSpec suite (189 examples) covering every public contract

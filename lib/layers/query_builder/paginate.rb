@@ -8,7 +8,7 @@ module Layers
 
       def page(page)
         @paginated = true
-        @relation = relation.page(page)
+        @relation = pagination_adapter.page(relation, page)
         self
       end
 
@@ -18,12 +18,19 @@ module Layers
 
       def per(size)
         if paginated
-          @relation = relation.per_page(size)
+          @relation = pagination_adapter.per(relation, size)
           self
         else
           error = 'Cannot set page size on an unpaginated query.'
           fail PaginationError, error
         end
+      end
+
+
+      private
+
+      def pagination_adapter
+        Layers.configuration.pagination_adapter
       end
 
     end

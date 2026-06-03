@@ -12,4 +12,8 @@ RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     mocks.verify_partial_doubles = true
   end
+
+  config.after do
+    Layers.instance_variable_set(:@configuration, nil)
+  end
 end

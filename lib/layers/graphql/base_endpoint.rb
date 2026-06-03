@@ -55,7 +55,7 @@ module Layers
         execute!
 
       rescue StandardError => e
-        raise GraphQL::ExecutionError, e.message
+        raise execution_error_class, e.message
       end
 
 
@@ -96,6 +96,13 @@ module Layers
 
       def execution_args
         @execution_args ||= initial_resolve_args.merge(user_story_args)
+      end
+
+      def execution_error_class
+        Layers.configuration.graphql_execution_error ||
+          fail(Layers::ConfigurationError,
+               'No GraphQL execution error class is available. ' \
+               'Set Layers.configuration.graphql_execution_error.')
       end
 
       def user_story

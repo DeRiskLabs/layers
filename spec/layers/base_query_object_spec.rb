@@ -100,6 +100,18 @@ RSpec.describe Layers::BaseQueryObject do
         end.to raise_error(Layers::BaseQueryObject::RelationError)
       end
     end
+
+    context 'with the duck type adapter configured' do
+      before do
+        Layers.configure { |config| config.relation_adapter = Layers::Adapters::Relation::DuckType }
+      end
+
+      let(:duck_relation) { double('Relation', where: nil) }
+
+      it 'accepts anything answering the relation protocol' do
+        expect { test_class.new(duck_relation) }.not_to raise_error
+      end
+    end
   end
 
   describe 'subclass contract' do

@@ -8,6 +8,7 @@ require 'active_support/core_ext/string/inflections'
 require 'layers/version'
 
 require 'layers/errors'
+require 'layers/adapters'
 require 'layers/configuration'
 require 'layers/logger'
 require 'layers/result'

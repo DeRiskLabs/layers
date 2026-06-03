@@ -340,9 +340,29 @@ query.order(sort_field: :title, sort_direction: :asc).page(2).per(25).all
 ```
 
 - `order(sort_field: :created_at, sort_direction: :desc)` — defaults shown
-- `page(n)` then `per(size)` — pagination; the relation must respond to `page` and
-  `per_page`. Calling `per` before `page` raises
+- `page(n)` then `per(size)` — pagination. Calling `per` before `page` raises
   `Layers::QueryBuilder::PaginationError`.
+
+Pagination goes through an adapter, so the query object never knows which pagination
+gem the host app uses. Kaminari is detected automatically; otherwise the will_paginate
+message style (`page`/`per_page`) is used. Any object answering
+`page(relation, number)` and `per(relation, size)` can be configured instead:
+
+```ruby
+Layers.configure do |config|
+  config.pagination_adapter = Layers::Adapters::Pagination::Kaminari
+end
+```
+
+Relation validation is also adapter-based. The default accepts `ActiveRecord::Relation`
+instances and model classes; swap in `Layers::Adapters::Relation::DuckType` (anything
+answering `where`) or your own `relation?(object)` predicate:
+
+```ruby
+Layers.configure do |config|
+  config.relation_adapter = Layers::Adapters::Relation::DuckType
+end
+```
 
 ## Results
 
@@ -429,7 +449,18 @@ How `resolve` works:
 4. The user story is called with the endpoint as listener
    (`on_success: :success, on_failure: :failure`), which dispatches to your
    `on_success`/`on_failure` methods.
-5. Any error raised along the way is re-raised as `GraphQL::ExecutionError`.
+5. Any error raised along the way is re-raised as the configured GraphQL execution
+   error class — `GraphQL::ExecutionError` is detected automatically when the graphql
+   gem is present, or inject your own:
+
+   ```ruby
+   Layers.configure do |config|
+     config.graphql_execution_error = MyApp::ApiError
+   end
+   ```
+
+   Using the GraphQL pieces with no error class available raises
+   `Layers::ConfigurationError`.
 
 Configuration mistakes fail loudly: a missing or non-constantizable `user_story` raises
 `InvalidUserStory`; a `user_story_arg` without a backing method raises
@@ -439,16 +470,23 @@ explanatory messages. Endpoints that do not define `on_success`/`on_failure` rai
 
 ## Configuration and Logging
 
+`Layers.configure` is the single place the gem learns about its host:
+
+```ruby
+Layers.configure do |config|
+  config.logger = SemanticLogger['layers']
+  config.pagination_adapter = Layers::Adapters::Pagination::Kaminari
+  config.relation_adapter = Layers::Adapters::Relation::DuckType
+  config.graphql_execution_error = GraphQL::ExecutionError
+end
+```
+
+Every setting has a sensible default — a Rails app with kaminari or will_paginate and
+graphql-ruby needs no configuration at all.
+
 The gem logs through `Layers::Logger.logger`, which resolves in order:
 
-1. A configured logger:
-
-   ```ruby
-   Layers.configure do |config|
-     config.logger = SemanticLogger['layers']
-   end
-   ```
-
+1. The configured logger
 2. `Rails.logger`, when Rails is present outside production
 3. Its own file logger writing to `log/layers.log`
 
@@ -480,6 +518,7 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
 | Error | Raised when |
 | --- | --- |
 | `Layers::Error` | Base class for all gem errors (`< StandardError`) |
+| `Layers::ConfigurationError` | A required host integration is neither detected nor configured (e.g. no GraphQL execution error class) |
 | `Layers::DSL::MissingRequiredInputs` | A required input was not provided (`< ArgumentError`) |
 | `Layers::DSL::UnexpectedInputs` | An undeclared input was provided (`< ArgumentError`) |
 | `Layers::DSL::ClassCallable::MissingMethodError` | `.call` hit a `TypeError` caused by a missing method — usually a broken delegation |

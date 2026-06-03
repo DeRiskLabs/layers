@@ -66,4 +66,20 @@ RSpec.describe Layers::QueryBuilder::Paginate do
       expect(query.paginated).to be_nil
     end
   end
+
+  context 'with a configured pagination adapter' do
+    let(:adapter) { spy('PaginationAdapter') }
+
+    before do
+      Layers.configure { |config| config.pagination_adapter = adapter }
+    end
+
+    execute do
+      query.page(2)
+    end
+
+    it 'delegates paging to the adapter' do
+      expect(adapter).to have_received(:page).with(relation, 2)
+    end
+  end
 end

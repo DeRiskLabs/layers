@@ -213,6 +213,34 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end.to raise_error(GraphQL::ExecutionError, 'boom')
       end
     end
+
+    context 'when an execution error class is configured' do
+      let(:custom_error) { Class.new(StandardError) }
+
+      before do
+        Layers.configure { |config| config.graphql_execution_error = custom_error }
+        allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
+      end
+
+      it 'raises the configured error class' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(custom_error, 'boom')
+      end
+    end
+
+    context 'when no execution error class is available' do
+      before do
+        hide_const('GraphQL')
+        allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
+      end
+
+      it 'raises ConfigurationError' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(Layers::ConfigurationError)
+      end
+    end
   end
 
   describe '#success' do
