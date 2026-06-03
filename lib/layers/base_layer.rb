@@ -74,7 +74,5 @@ module Layers
       notify_observers(of_event: :success)
       listener.public_send(on_success, *success_args, **success_opts)
     end
-
   end
-
 end

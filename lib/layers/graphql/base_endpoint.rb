@@ -1,28 +1,17 @@
 # frozen_string_literal: true
 
 module Layers
-
   module Graphql
-
-    # The BaseEndpoint module connects GraphQL mutations and resolvers to user
-    # stories declaratively.
-    #
-    # An including class names its user story with the user_story DSL and maps
-    # resolver arguments with user_story_arg. The resolve entrypoint calls the
-    # user story with the endpoint as listener, dispatching outcomes to the
-    # on_success and on_failure methods the subclass must define.
     module BaseEndpoint
 
       class InvalidUserStory < Layers::Error; end
 
-      # Error raised when a user_story_arg has been declared without a backing
-      # method to resolve its value.
       class InvalidUserStoryArgumentMethod < Layers::Error
 
         def initialize(method_name)
           message = "A 'user_story_arg :#{method_name}' has been set, " \
             'however no method with this name has been defined.'
-          super message
+          super(message)
         end
 
       end
@@ -31,10 +20,6 @@ module Layers
         base.extend(ClassMethods)
       end
 
-      # Class methods added to the including class
-      #
-      # Provides the user_story and user_story_arg declarations that wire the
-      # endpoint to its user story.
       module ClassMethods
 
         def user_story(name_string)
@@ -135,7 +120,5 @@ module Layers
       end
 
     end
-
   end
-
 end
