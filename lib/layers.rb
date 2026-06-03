@@ -2,12 +2,15 @@
 
 require 'naught'
 require 'active_support'
+require 'active_support/core_ext/object/blank'
+require 'active_support/core_ext/string/inflections'
 
 require 'layers/version'
 
 require 'layers/errors'
 require 'layers/configuration'
 require 'layers/logger'
+require 'layers/result'
 
 require 'layers/dsl'
 require 'layers/base_layer'
