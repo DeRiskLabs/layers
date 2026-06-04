@@ -34,7 +34,8 @@ The gem provides three building blocks:
 
 - [Core Concepts](#core-concepts) — the lifecycle, the message protocol, and which
   layer to write
-- [Defining a Layer](#defining-a-layer) — inputs, `#call`, listeners, observers
+- [Defining a Layer](#defining-a-layer) — inputs, `#call`, listeners, observers,
+  instrumentation
 - [Query Objects](#query-objects) — scoped, chainable reads
 - [GraphQL Endpoints](#graphql-endpoints) — declarative mutations and resolvers
 - [Configuration and Logging](#configuration-and-logging)
@@ -308,6 +309,58 @@ for it:
 ```ruby
 observer_exception_handler :handle_observer_error
 ```
+
+### Instrumentation
+
+Instrumenters observe outcomes from between the layer and its listener. Declaring one
+inserts it into the callback chain — the layer reports, each instrumenter does its
+work, and the message continues to the caller unchanged:
+
+```ruby
+class UseCases::Members::CreateSeller < BaseUseCase
+  required :identity
+
+  instrument Instrumentation::Timing
+  instrument Instrumentation::Audit
+end
+```
+
+```text
+forward:   caller ──.call(listener: self)──▶ layer
+return:    layer ─success─▶ Timing ─▶ Audit ─▶ caller's callback
+```
+
+An instrumenter subclasses `Layers::Instrumenter` and implements one private method:
+
+```ruby
+module Instrumentation
+  class Audit < Layers::Instrumenter
+
+    private
+
+    def instrument!(outcome)
+      AuditTrail.record(subject.class.name, outcome, outcome_opts)
+    end
+  end
+end
+```
+
+`instrument!(outcome)` receives `:success` or `:failure`. The payload is available as
+`outcome_args` / `outcome_opts`, the instrumented layer as `subject`, and timing as
+`started_at` / `elapsed_ms` — instrumenters are created when the layer is constructed,
+so elapsed time spans the layer's life. The default `instrument!` logs
+`"<LayerClass> <outcome> in <n>ms"`, so a bare subclass is already a timing logger.
+
+Rules of the chain:
+
+- Declared order is delivery order: the first declared instrumenter hears the outcome
+  first.
+- Original callback names survive: the last link calls the caller's
+  `on_success`/`on_failure` exactly as if no chain existed.
+- Instrumenters are trusted infrastructure: an exception raised in one halts callback
+  delivery — unlike observers, which are isolated. Put failure-isolated side effects
+  on observers.
+- Like all class-level declarations, `instrument` is per-class — nothing inherits.
 
 ### Controller integration
 

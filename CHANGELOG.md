@@ -39,6 +39,10 @@ distribution from a private git source.
   - an injectable GraphQL execution error class, detected from the
     graphql gem when present; using the GraphQL pieces with none
     available raises `Layers::ConfigurationError`
+- `Layers::Instrumenter` and the `instrument` macro — declared instrumenter
+  classes are inserted between a layer and its listener as a callback daisy
+  chain; subclasses implement `instrument!(outcome)` with the subject, the
+  outcome payload, and timing helpers available
 - `Layers.configure` and `Layers::Logger` — configurable logging with
   Rails-aware fallbacks
 - Full RSpec suite covering every public contract

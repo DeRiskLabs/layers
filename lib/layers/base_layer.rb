@@ -11,6 +11,7 @@ module Layers
     include Layers::DSL::NullListener
     include Layers::DSL::CallbackDefaults
     include Layers::DSL::ClassCallable
+    include Layers::DSL::Instrumented
 
     attr_reader :listener,
                 :on_failure,
@@ -23,6 +24,8 @@ module Layers
       @listener = listener || null_listener
       @on_failure = on_failure || self.class.on_failure_default
       @on_success = on_success || self.class.on_success_default
+
+      insert_instrumenters!
 
       super(opts)
     end

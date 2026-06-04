@@ -8,6 +8,7 @@ RSpec.describe Layers::BaseLayer do
   it { expect(described_class.included_modules).to include(Layers::DSL::NullListener) }
   it { expect(described_class.included_modules).to include(Layers::DSL::CallbackDefaults) }
   it { expect(described_class.included_modules).to include(Layers::DSL::ClassCallable) }
+  it { expect(described_class.included_modules).to include(Layers::DSL::Instrumented) }
 
   describe '#initialize' do
     subject(:layer) { described_class.allocate }
@@ -170,6 +171,115 @@ RSpec.describe Layers::BaseLayer do
 
       it 'captures the positional args in the result' do
         expect(layer.result).to eq(error: 'test', failure_args: ['extra'])
+      end
+    end
+  end
+
+  describe 'instrumentation' do
+    let(:listener) { spy('Listener') }
+    let(:recordings) { [] }
+
+    let(:first_instrumenter) do
+      recorder = recordings
+      Class.new(Layers::Instrumenter) do
+        define_method(:instrument!) { |outcome| recorder << [:first, outcome] }
+      end
+    end
+
+    let(:second_instrumenter) do
+      recorder = recordings
+      Class.new(Layers::Instrumenter) do
+        define_method(:instrument!) { |outcome| recorder << [:second, outcome] }
+      end
+    end
+
+    context 'with two instrumenters declared' do
+      subject(:layer) { layer_class.new(listener: listener, on_success: :done) }
+
+      let(:layer_class) do
+        first = first_instrumenter
+        second = second_instrumenter
+        Class.new(described_class) do
+          instrument first
+          instrument second
+
+          def call
+            success(result: true)
+          end
+        end
+      end
+
+      execute do
+        layer.call
+      end
+
+      it 'runs the instrumenters in declared order' do
+        expect(recordings).to eq([[:first, :success], [:second, :success]])
+      end
+
+      it 'delivers the callback through the chain with the original name' do
+        expect(listener).to have_received(:done).with(result: true)
+      end
+    end
+
+    context 'with a subclass of an instrumented layer' do
+      subject(:layer) { subclass.new(listener: listener) }
+
+      let(:layer_class) do
+        first = first_instrumenter
+        Class.new(described_class) do
+          instrument first
+
+          def call
+            success(result: true)
+          end
+        end
+      end
+
+      let(:subclass) { Class.new(layer_class) }
+
+      execute do
+        layer.call
+      end
+
+      it 'does not inherit the parent instrumenters' do
+        expect(recordings).to be_empty
+      end
+
+      it 'still delivers the callback' do
+        expect(listener).to have_received(:on_success).with(result: true)
+      end
+    end
+
+    context 'with a duplicate declaration' do
+      subject(:layer) { layer_class.new(listener: listener) }
+
+      let(:layer_class) do
+        first = first_instrumenter
+        Class.new(described_class) do
+          instrument first
+          instrument first
+
+          def call
+            success(result: true)
+          end
+        end
+      end
+
+      execute do
+        layer.call
+      end
+
+      it 'inserts the instrumenter once' do
+        expect(recordings).to eq([[:first, :success]])
+      end
+    end
+
+    context 'with a non-class argument' do
+      it 'raises ArgumentError' do
+        expect do
+          Class.new(described_class) { instrument :timing }
+        end.to raise_error(ArgumentError)
       end
     end
   end

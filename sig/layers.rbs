@@ -38,6 +38,28 @@ module Layers
     def self.logger: () -> untyped
   end
 
+  class Instrumenter
+    attr_reader subject: untyped
+    attr_reader listener: untyped
+    attr_reader on_failure: Symbol
+    attr_reader on_success: Symbol
+    attr_reader outcome_args: Array[untyped]?
+    attr_reader outcome_opts: Hash[Symbol, untyped]?
+    attr_reader started_at: Float
+
+    def initialize: (subject: untyped, listener: untyped, on_failure: Symbol, on_success: Symbol) -> void
+
+    def success: (*untyped success_args, **untyped success_opts) -> untyped
+    def failure: (*untyped failure_args, **untyped failure_opts) -> untyped
+
+    private
+
+    def capture: (Array[untyped] args, Hash[Symbol, untyped] opts) -> void
+    def elapsed_ms: () -> Float
+    def instrument!: (Symbol outcome) -> void
+    def logger: () -> untyped
+  end
+
   module DSL
     class MissingRequiredInputs < ArgumentError
     end
@@ -115,6 +137,19 @@ module Layers
       def validate_no_unpermitted_inputs!: () -> void
     end
 
+    module Instrumented
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def instrument: (*Class instrumenter_classes) -> void
+        def instrumenters: () -> Set[Class]
+      end
+
+      private
+
+      def insert_instrumenters!: () -> void
+    end
+
     module NullListener
       private
 
@@ -157,6 +192,8 @@ module Layers
     include DSL::CallbackDefaults::InstanceMethods
     include DSL::ClassCallable
     extend DSL::ClassCallable::ClassMethods
+    include DSL::Instrumented
+    extend DSL::Instrumented::ClassMethods
 
     attr_reader listener: untyped
     attr_reader on_failure: Symbol
