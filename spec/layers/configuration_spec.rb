@@ -88,6 +88,56 @@ RSpec.describe Layers::Configuration do
     end
   end
 
+  describe '#masked_error_message' do
+    it 'defaults to a generic message' do
+      expect(configuration.masked_error_message).to eq('Internal error')
+    end
+
+    context 'when a message is assigned' do
+      before do
+        configuration.masked_error_message = 'Whoops'
+      end
+
+      it 'returns the assigned message' do
+        expect(configuration.masked_error_message).to eq('Whoops')
+      end
+    end
+  end
+
+  describe '#exposed_error_classes' do
+    it 'defaults to an empty array' do
+      expect(configuration.exposed_error_classes).to eq([])
+    end
+
+    context 'when classes are assigned' do
+      let(:exposed_error) { Class.new(StandardError) }
+
+      before do
+        configuration.exposed_error_classes = [exposed_error]
+      end
+
+      it 'returns the assigned classes' do
+        expect(configuration.exposed_error_classes).to eq([exposed_error])
+      end
+    end
+  end
+
+  describe '#reveal_masked_errors' do
+    it 'defaults to falsey' do
+      expect(configuration.reveal_masked_errors).to be_falsey
+    end
+
+    context 'when enabled' do
+      before do
+        configuration.reveal_masked_errors = true
+      end
+
+      it 'returns true' do
+        expect(configuration.reveal_masked_errors).to be(true)
+      end
+    end
+  end
+
   describe 'Layers.configuration' do
     after do
       Layers.instance_variable_set(:@configuration, nil)

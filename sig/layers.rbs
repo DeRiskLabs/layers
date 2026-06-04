@@ -13,9 +13,14 @@ module Layers
 
   class Configuration
     attr_accessor logger: untyped
+    attr_accessor reveal_masked_errors: bool?
 
+    def exposed_error_classes: () -> Array[Class]
+    def exposed_error_classes=: (Array[Class]) -> Array[Class]
     def graphql_execution_error: () -> untyped
     def graphql_execution_error=: (untyped) -> untyped
+    def masked_error_message: () -> String
+    def masked_error_message=: (String) -> String
     def pagination_adapter: () -> untyped
     def pagination_adapter=: (untyped) -> untyped
     def relation_adapter: () -> untyped
@@ -273,10 +278,14 @@ module Layers
 
       private
 
+      def client_facing_message: (Exception error) -> String
       def context_has_errors?: () -> untyped
       def execute!: () -> untyped
       def execution_args: () -> Hash[Symbol, untyped]
       def execution_error_class: () -> untyped
+      def expose_error?: (Exception error) -> bool
+      def log_masked_error: (Exception error) -> void
+      def logger: () -> untyped
       def user_story: () -> untyped
       def user_story_args: () -> Hash[Symbol, untyped]
     end

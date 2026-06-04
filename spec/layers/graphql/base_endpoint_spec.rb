@@ -179,6 +179,10 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end
       end
 
+      before do
+        Layers.configure { |config| config.reveal_masked_errors = true }
+      end
+
       it 'raises ExecutionError explaining the failure' do
         expect do
           endpoint.resolve(id: 1)
@@ -195,6 +199,10 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end
       end
 
+      before do
+        Layers.configure { |config| config.reveal_masked_errors = true }
+      end
+
       it 'raises ExecutionError naming the missing method' do
         expect do
           endpoint.resolve(id: 1)
@@ -207,7 +215,79 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
       end
 
-      it 'wraps the error in ExecutionError' do
+      it 'raises ExecutionError with the masked message' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(GraphQL::ExecutionError, 'Internal error')
+      end
+
+      context 'with the logger observed' do
+        let(:logger) { instance_spy(Logger) }
+
+        before do
+          allow(Layers::Logger).to receive(:logger).and_return(logger)
+        end
+
+        execute do
+          endpoint.resolve(id: 1)
+        rescue GraphQL::ExecutionError
+          nil
+        end
+
+        it 'logs the masked error with its source' do
+          expect(logger).to have_received(:error).with(/masked StandardError: boom/)
+        end
+      end
+    end
+
+    context 'with a custom masked error message' do
+      before do
+        Layers.configure { |config| config.masked_error_message = 'Whoops' }
+        allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
+      end
+
+      it 'masks with the configured message' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(GraphQL::ExecutionError, 'Whoops')
+      end
+    end
+
+    context 'when the raised error is already the execution error class' do
+      before do
+        allow(user_story_class).to receive(:call)
+          .and_raise(GraphQL::ExecutionError, 'visible to the client')
+      end
+
+      it 'passes it through untouched' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(GraphQL::ExecutionError, 'visible to the client')
+      end
+    end
+
+    context 'when the error class is exposed by configuration' do
+      let(:exposed_error) { Class.new(StandardError) }
+
+      before do
+        Layers.configure { |config| config.exposed_error_classes = [exposed_error] }
+        allow(user_story_class).to receive(:call).and_raise(exposed_error, 'widget shelved')
+      end
+
+      it 'exposes the original message' do
+        expect do
+          endpoint.resolve(id: 1)
+        end.to raise_error(GraphQL::ExecutionError, 'widget shelved')
+      end
+    end
+
+    context 'when reveal_masked_errors is enabled' do
+      before do
+        Layers.configure { |config| config.reveal_masked_errors = true }
+        allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
+      end
+
+      it 'exposes the original message' do
         expect do
           endpoint.resolve(id: 1)
         end.to raise_error(GraphQL::ExecutionError, 'boom')
@@ -222,10 +302,10 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         allow(user_story_class).to receive(:call).and_raise(StandardError, 'boom')
       end
 
-      it 'raises the configured error class' do
+      it 'raises the configured error class with the masked message' do
         expect do
           endpoint.resolve(id: 1)
-        end.to raise_error(custom_error, 'boom')
+        end.to raise_error(custom_error, 'Internal error')
       end
     end
 

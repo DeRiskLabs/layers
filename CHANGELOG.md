@@ -57,6 +57,15 @@ Latent defects carried over from the embedded application copy:
 - `camelize` / `constantize` / `present?` were unavailable outside Rails: the
   gem now requires the ActiveSupport core extensions it relies on
 
+### Changed
+
+- `Graphql::BaseEndpoint` masks unexpected errors from API clients: the
+  original class, message, and backtrace are logged, and the execution error
+  carries only the configured `masked_error_message` (default
+  `'Internal error'`). Errors of the execution error class pass through
+  untouched; `exposed_error_classes` allowlists others;
+  `reveal_masked_errors` restores full messages for development
+
 ### Removed
 
 - `Layers::Result` — the ask-style result-object pattern carried over from the

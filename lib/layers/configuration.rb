@@ -2,17 +2,28 @@
 
 module Layers
 
-  # Global gem settings: logger, graphql_execution_error, pagination and
-  # relation adapters.
+  # Global gem settings: logger, graphql_execution_error, error masking,
+  # pagination and relation adapters.
   class Configuration
 
-    attr_accessor :logger
-    attr_writer :graphql_execution_error,
+    attr_accessor :logger,
+                  :reveal_masked_errors
+    attr_writer :exposed_error_classes,
+                :graphql_execution_error,
+                :masked_error_message,
                 :pagination_adapter,
                 :relation_adapter
 
+    def exposed_error_classes
+      @exposed_error_classes ||= []
+    end
+
     def graphql_execution_error
       @graphql_execution_error ||= detect_graphql_execution_error
+    end
+
+    def masked_error_message
+      @masked_error_message ||= 'Internal error'
     end
 
     def pagination_adapter

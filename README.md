@@ -417,9 +417,11 @@ How `resolve` works:
 4. The user story is called with the endpoint as listener
    (`on_success: :success, on_failure: :failure`), which dispatches to your
    `on_success`/`on_failure` methods.
-5. Any error raised along the way is re-raised as the configured GraphQL execution
-   error class — `GraphQL::ExecutionError` is detected automatically when the graphql
-   gem is present, or inject your own:
+5. Any unexpected error is **masked from the client**: its class, message, and
+   backtrace are logged through the gem's logger, and the configured GraphQL execution
+   error class is raised carrying only `masked_error_message` (default
+   `'Internal error'`). `GraphQL::ExecutionError` is detected automatically when the
+   graphql gem is present, or inject your own:
 
    ```ruby
    Layers.configure do |config|
@@ -430,11 +432,20 @@ How `resolve` works:
    Using the GraphQL pieces with no error class available raises
    `Layers::ConfigurationError`.
 
-Configuration mistakes fail loudly: a missing or non-constantizable `user_story` raises
-`InvalidUserStory`; a `user_story_arg` without a backing method raises
-`InvalidUserStoryArgumentMethod`; both surface through `GraphQL::ExecutionError` with
-explanatory messages. Endpoints that do not define `on_success`/`on_failure` raise
-`NotImplementedError`.
+What the client sees is controllable:
+
+- Errors that are already the execution error class pass through untouched — they are
+  client-facing by definition.
+- `config.exposed_error_classes = [Widgets::NotAvailable]` allowlists domain errors
+  whose messages are safe to expose.
+- `config.reveal_masked_errors = Rails.env.local?` restores full messages while
+  developing; the original error is always in the logs either way.
+
+Configuration mistakes fail loudly for the developer: a missing or non-constantizable
+`user_story` raises `InvalidUserStory`; a `user_story_arg` without a backing method
+raises `InvalidUserStoryArgumentMethod`. Both surface through the execution error —
+masked in production, explanatory in the logs and wherever `reveal_masked_errors` is
+on. Endpoints that do not define `on_success`/`on_failure` raise `NotImplementedError`.
 
 ## Configuration and Logging
 
@@ -446,6 +457,9 @@ Layers.configure do |config|
   config.pagination_adapter = Layers::Adapters::Pagination::Kaminari
   config.relation_adapter = Layers::Adapters::Relation::DuckType
   config.graphql_execution_error = GraphQL::ExecutionError
+  config.masked_error_message = 'Something went wrong'
+  config.exposed_error_classes = [MyApp::ClientSafeError]
+  config.reveal_masked_errors = Rails.env.local?
 end
 ```
 

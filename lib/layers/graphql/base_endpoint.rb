@@ -55,7 +55,9 @@ module Layers
         execute!
 
       rescue StandardError => e
-        raise execution_error_class, e.message
+        raise e if e.is_a?(execution_error_class)
+
+        raise execution_error_class, client_facing_message(e)
       end
 
 
@@ -80,6 +82,13 @@ module Layers
 
       private
 
+      def client_facing_message(error)
+        return error.message if expose_error?(error)
+
+        log_masked_error(error)
+        Layers.configuration.masked_error_message
+      end
+
       def context_has_errors?
         return unless respond_to?(:context) && context
         context.errors.present?
@@ -103,6 +112,21 @@ module Layers
           fail(Layers::ConfigurationError,
                'No GraphQL execution error class is available. ' \
                'Set Layers.configuration.graphql_execution_error.')
+      end
+
+      def expose_error?(error)
+        return true if Layers.configuration.reveal_masked_errors
+
+        Layers.configuration.exposed_error_classes.any? { |klass| error.is_a?(klass) }
+      end
+
+      def log_masked_error(error)
+        detail = ["#{self.class} masked #{error.class}: #{error.message}", *error.backtrace]
+        logger.error detail.join("\n")
+      end
+
+      def logger
+        @logger ||= Layers::Logger.logger
       end
 
       def user_story
