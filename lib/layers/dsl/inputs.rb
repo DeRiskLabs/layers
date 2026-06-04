@@ -6,22 +6,14 @@ module Layers
 
   module DSL
 
-    # The Inputs module provides functionality for declaring and validating
-    # required and optional inputs for a class.
-    #
-    # This module allows classes to define which inputs are required and which
-    # are optional, and provides validation to ensure all required inputs are
-    # provided and no unexpected inputs are passed.
+    # Declares required and optional inputs and validates that all required inputs
+    # are provided and no unexpected inputs are passed.
     module Inputs
 
       def self.included(base)
         base.extend(ClassMethods)
       end
 
-      # Class methods added to the including class
-      #
-      # Provides methods for declaring required and optional inputs,
-      # as well as default values for optional inputs.
       module ClassMethods
 
         def all_inputs
@@ -117,8 +109,6 @@ module Layers
       def set_attributes_from_inputs!
         inputs.each { |attr, value| public_send("#{attr}=", value) }
       end
-
-      # Input Presence Validation
 
       def validate_required_inputs_present!
         return if missing_inputs.empty?

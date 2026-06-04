@@ -5,11 +5,8 @@ require 'singleton'
 
 module Layers
 
-  # Logger class for the Layers gem.
-  #
-  # This class extends Ruby's standard Logger and implements the Singleton pattern
-  # to provide a consistent logging interface throughout the application.
-  # It can use Rails.logger in a Rails environment or create its own log file.
+  # Extends ::Logger as a singleton; uses Rails.logger in a Rails environment
+  # or its own log file.
   class Logger < ::Logger
 
     include Singleton

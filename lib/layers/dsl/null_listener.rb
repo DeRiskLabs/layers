@@ -6,12 +6,7 @@ module Layers
 
   module DSL
 
-    # The NullListener module provides a null object implementation for listeners
-    # in the Layers pattern.
-    #
-    # This module allows classes to have a default listener that does nothing
-    # when no explicit listener is provided, following the Null Object pattern.
-    # This eliminates the need for nil checks when calling listener methods.
+    # A do-nothing default listener (Null Object) used when no listener is provided.
     module NullListener
 
 

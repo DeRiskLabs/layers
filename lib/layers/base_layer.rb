@@ -1,24 +1,9 @@
 # frozen_string_literal: true
 
-# The Layers module is the main namespace for the Layers gem.
-# It provides a framework for implementing layered architecture in Ruby applications.
 module Layers
 
-  # BaseLayer is the core class of the Layers gem, providing the foundation for
-  # implementing the layered architecture pattern.
-  #
-  # This class combines several DSL modules to provide a comprehensive set of
-  # features for creating service objects, use cases, and user stories:
-  # - Observer pattern for side effects
-  # - Input validation and handling
-  # - Null listener pattern for safe callback handling
-  # - Default callbacks for standardized success/failure handling
-  # - Class callable pattern for convenient instantiation and execution
-  #
-  # BaseLayer objects follow a consistent lifecycle:
-  # 1. Instantiate with required and optional inputs
-  # 2. Execute business logic in the #call method
-  # 3. Return success or failure, notifying observers and calling listener callbacks
+  # The base for layer objects (use cases, user stories): inputs, observers,
+  # listener callbacks, and class-level .call.
   class BaseLayer
 
     include Layers::DSL::Observers

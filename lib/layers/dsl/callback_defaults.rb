@@ -4,11 +4,8 @@ module Layers
 
   module DSL
 
-    # The CallbackDefaults module provides functionality for setting and accessing
-    # default callback methods for success and failure events in a layer.
-    #
-    # This module allows classes to define default callback method names that will be used
-    # when no specific callbacks are provided during initialization.
+    # Default callback method names for success and failure events, used when no
+    # specific callbacks are provided during initialization.
     module CallbackDefaults
 
       ON_FAILURE_DEFAULT_CALLBACK = :on_failure
@@ -19,10 +16,6 @@ module Layers
         base.include(InstanceMethods)
       end
 
-      # Class methods added to the including class
-      #
-      # Provides methods for setting and accessing default callback method names
-      # at the class level.
       module ClassMethods
 
         def default_callbacks(**args)
@@ -40,10 +33,6 @@ module Layers
 
       end
 
-      # Instance methods added to the including class
-      #
-      # Provides methods for accessing the default callback method names
-      # at the instance level.
       module InstanceMethods
 
         attr_reader :on_failure_default, :on_success_default

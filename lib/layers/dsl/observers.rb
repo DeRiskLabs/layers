@@ -6,22 +6,13 @@ module Layers
 
   module DSL
 
-    # The Observers module provides functionality for registering and notifying
-    # observer methods when specific events occur.
-    #
-    # This module implements the Observer pattern, allowing classes to register
-    # methods that should be called when success or failure events occur,
-    # without tightly coupling the event source to its observers.
+    # Registers and notifies observer methods when success or failure events occur.
     module Observers
 
       def self.included(base)
         base.extend ClassMethods
       end
 
-      # Class methods added to the including class
-      #
-      # Provides methods for registering observer methods and configuring
-      # exception handling for observer notifications.
       module ClassMethods
 
         attr_reader :observer_exception_handler_method
@@ -42,8 +33,6 @@ module Layers
         end
 
       end
-
-      # Instance methods included
 
       def notify_observers(of_event: :success)
         observers_array(of_event: of_event).each { |observer| safely_invoke_observer(observer) }
