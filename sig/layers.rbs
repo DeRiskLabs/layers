@@ -1,4 +1,331 @@
 module Layers
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class Error < StandardError
+  end
+
+  class ConfigurationError < Error
+  end
+
+  def self.configuration: () -> Configuration
+
+  def self.configure: () { (Configuration) -> void } -> void
+
+  class Configuration
+    attr_accessor logger: untyped
+
+    def graphql_execution_error: () -> untyped
+    def graphql_execution_error=: (untyped) -> untyped
+    def pagination_adapter: () -> untyped
+    def pagination_adapter=: (untyped) -> untyped
+    def relation_adapter: () -> untyped
+    def relation_adapter=: (untyped) -> untyped
+
+    private
+
+    def detect_graphql_execution_error: () -> untyped
+    def detect_pagination_adapter: () -> untyped
+  end
+
+  class Logger < ::Logger
+    include Singleton
+
+    def self.logger: () -> untyped
+  end
+
+  class Result
+    attr_reader success: bool
+    attr_reader value: untyped
+    attr_reader errors: Array[untyped]
+    attr_reader metadata: Hash[untyped, untyped]
+
+    def self.success: (?untyped value, ?Hash[untyped, untyped] metadata) -> Result
+
+    def self.failure: (?untyped errors, ?Hash[untyped, untyped] metadata) -> Result
+
+    def initialize: (success: bool, ?value: untyped, ?errors: untyped, ?metadata: Hash[untyped, untyped]) -> void
+
+    def success?: () -> bool
+    def failure?: () -> bool
+    def and_then: () { (untyped value) -> untyped } -> Result
+    def on_success: () { (untyped value) -> void } -> Result
+    def on_failure: () { (Array[untyped] errors) -> void } -> Result
+    def to_h: () -> Hash[Symbol, untyped]
+
+    private
+
+    def normalize_errors: (untyped errors) -> Array[untyped]
+  end
+
+  module DSL
+    class MissingRequiredInputs < ArgumentError
+    end
+
+    class UnexpectedInputs < ArgumentError
+    end
+
+    class NotImplementedError < ::NotImplementedError
+    end
+
+    module CallbackDefaults
+      ON_FAILURE_DEFAULT_CALLBACK: Symbol
+      ON_SUCCESS_DEFAULT_CALLBACK: Symbol
+
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def default_callbacks: (?on_failure: Symbol?, ?on_success: Symbol?) -> void
+        def on_failure_default: () -> Symbol
+        def on_success_default: () -> Symbol
+      end
+
+      module InstanceMethods
+        attr_reader on_failure_default: Symbol
+        attr_reader on_success_default: Symbol
+
+        def initialize: (*untyped args, **untyped opts) -> void
+      end
+    end
+
+    module ClassCallable
+      class MissingMethodError < StandardError
+        def initialize: (Exception original_error, String? klass_name) -> void
+      end
+
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def call: (*untyped args, **untyped opts) -> untyped
+      end
+
+      def call: () -> untyped
+    end
+
+    module Inputs
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def all_inputs: () -> Set[Symbol]
+        def optional: (*Symbol input_names) -> void
+        def optional_inputs: () -> Set[Symbol]
+        def required: (*Symbol input_names) -> void
+        def required_inputs: () -> Set[Symbol]
+        def optional_with_default: (**untyped defaults_hash) -> void
+        def default_inputs: () -> Hash[Symbol, untyped]
+      end
+
+      attr_accessor inputs: Hash[Symbol, untyped]
+
+      def initialize: (?Hash[Symbol, untyped] inputs) -> void
+
+      def attributes: () -> Hash[Symbol, untyped]
+      def optional_attributes: () -> Hash[Symbol, untyped]
+      def required_attributes: () -> Hash[Symbol, untyped]
+
+      private
+
+      def add_default_inputs!: () -> void
+      def default_inputs: () -> Hash[Symbol, untyped]
+      def extra_inputs: () -> Array[Symbol]
+      def missing_inputs: () -> Array[Symbol]
+      def received_inputs: () -> Array[Symbol]
+      def set_attributes_from_inputs!: () -> void
+      def validate_required_inputs_present!: () -> void
+      def validate_no_unpermitted_inputs!: () -> void
+    end
+
+    module NullListener
+      private
+
+      def null_listener: () -> untyped
+      def null_listener_factory: () -> untyped
+    end
+
+    module Observers
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        attr_reader observer_exception_handler_method: Symbol?
+
+        def observer: (*untyped observer_methods, ?of_event: Symbol) -> void
+        def observers: () -> Hash[Symbol, Set[untyped]]
+        def observer_exception_handler: (Symbol exception_handler_method_name) -> Symbol
+      end
+
+      def notify_observers: (?of_event: Symbol) -> void
+      def observers: () -> Hash[Symbol, Set[untyped]]
+
+      private
+
+      def exception_handler_method: () -> Symbol?
+      def handle_observer_exception: (Exception exception) -> void
+      def logger: () -> untyped
+      def observers_array: (?of_event: Symbol) -> Array[untyped]
+      def safely_invoke_observer: (untyped observer) -> untyped
+    end
+  end
+
+  class BaseLayer
+    include DSL::Observers
+    extend DSL::Observers::ClassMethods
+    include DSL::Inputs
+    extend DSL::Inputs::ClassMethods
+    include DSL::NullListener
+    include DSL::CallbackDefaults
+    extend DSL::CallbackDefaults::ClassMethods
+    include DSL::CallbackDefaults::InstanceMethods
+    include DSL::ClassCallable
+    extend DSL::ClassCallable::ClassMethods
+
+    attr_reader listener: untyped
+    attr_reader on_failure: Symbol
+    attr_reader on_success: Symbol
+    attr_reader failed: bool?
+    attr_reader succeeded: bool?
+    attr_reader result: Hash[Symbol, untyped]?
+
+    def initialize: (?listener: untyped, ?on_failure: Symbol?, ?on_success: Symbol?, **untyped opts) -> void
+
+    def failure?: () -> bool?
+    def success?: () -> bool?
+
+    private
+
+    def failure: (*untyped failure_args, **untyped failure_opts) -> untyped
+    def success: (*untyped success_args, **untyped success_opts) -> untyped
+  end
+
+  module QueryBuilder
+    class PaginationError < Layers::Error
+    end
+
+    class ConfigurationError < Layers::Error
+    end
+
+    module Paginate
+      def page: (untyped page) -> self
+      def paginated: () -> bool?
+      def per: (untyped size) -> self
+
+      private
+
+      def pagination_adapter: () -> untyped
+    end
+
+    module RelationDefaults
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def default_relation_class: () -> untyped
+        def default_relation_class_name: () -> String?
+        def relation_class: (untyped name_finder) -> String
+      end
+
+      def default_initial_relation: () -> untyped
+    end
+
+    module Sort
+      def order: (?sort_field: Symbol, ?sort_direction: Symbol) -> self
+    end
+  end
+
+  class BaseQueryObject
+    class RelationError < Layers::Error
+    end
+
+    include QueryBuilder::RelationDefaults
+    extend QueryBuilder::RelationDefaults::ClassMethods
+    include QueryBuilder::Paginate
+    include QueryBuilder::Sort
+
+    attr_reader options: Hash[Symbol, untyped]
+    attr_reader relation: untyped
+    attr_reader unscoped_relation: untyped
+
+    def initialize: (?untyped relation, **untyped options) -> void
+
+    # delegated to relation
+    def all: (?) -> untyped
+    def count: (?) -> untyped
+    def find: (?) -> untyped
+    def find_by: (?) -> untyped
+    def find_by!: (?) -> untyped
+    def first: (?) -> untyped
+    def includes: (?) -> untyped
+    def joins: (?) -> untyped
+    def last: (?) -> untyped
+    def left_joins: (?) -> untyped
+    def limit: (?) -> untyped
+    def none: (?) -> untyped
+    def offset: (?) -> untyped
+    def pluck: (?) -> untyped
+    def select: (?) -> untyped
+    def where: (?) -> untyped
+
+    private
+
+    def validate_relation!: () -> void
+    def build_relation_defaults!: () -> void
+  end
+
+  module Graphql
+    module BaseEndpoint
+      class InvalidUserStory < Layers::Error
+      end
+
+      class InvalidUserStoryArgumentMethod < Layers::Error
+        def initialize: (Symbol? method_name) -> void
+      end
+
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def user_story: (String name_string) -> String
+        def user_story_class_name: () -> String?
+        def user_story_arg: (Symbol arg, ?Hash[Symbol, untyped] opts) -> Hash[Symbol, untyped]
+        def user_story_args: () -> Hash[Symbol, Hash[Symbol, untyped]]
+      end
+
+      attr_reader initial_resolve_args: Hash[Symbol, untyped]
+
+      def resolve: (**untyped resolve_args) -> untyped
+      def success: (**untyped return_args) -> untyped
+      def failure: (**untyped return_args) -> untyped
+      def on_success: (**untyped args) -> untyped
+      def on_failure: (**untyped args) -> untyped
+
+      private
+
+      def context_has_errors?: () -> untyped
+      def execute!: () -> untyped
+      def execution_args: () -> Hash[Symbol, untyped]
+      def execution_error_class: () -> untyped
+      def user_story: () -> untyped
+      def user_story_args: () -> Hash[Symbol, untyped]
+    end
+  end
+
+  module Adapters
+    module Pagination
+      class Kaminari
+        def self.page: (untyped relation, untyped number) -> untyped
+        def self.per: (untyped relation, untyped size) -> untyped
+      end
+
+      class WillPaginate
+        def self.page: (untyped relation, untyped number) -> untyped
+        def self.per: (untyped relation, untyped size) -> untyped
+      end
+    end
+
+    module Relation
+      class ActiveRecord
+        def self.relation?: (untyped object) -> bool
+      end
+
+      class DuckType
+        def self.relation?: (untyped object) -> bool
+      end
+    end
+  end
 end

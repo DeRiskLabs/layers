@@ -26,7 +26,7 @@ Gem::Specification.new do |spec|
     'rubygems_mfa_required' => 'true',
   }
 
-  spec.files = Dir.glob('{lib,spec}/**/*') + ['README.md', 'LICENSE.txt', 'CHANGELOG.md']
+  spec.files = Dir.glob('{lib,sig,spec}/**/*') + ['README.md', 'LICENSE.txt', 'CHANGELOG.md']
   spec.require_paths = ['lib']
 
   # Runtime dependencies
