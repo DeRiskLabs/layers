@@ -1,0 +1,366 @@
+#!/usr/bin/env bash
+#
+# Release smoke test: generates a throwaway API-only Rails app, installs the
+# gem from this repository as a git source (committed HEAD only), builds a
+# small layer stack per the house skills (app/lib/use_cases, user_stories,
+# queries), and exercises it directly and over HTTP.
+#
+# Slow (~1-2 min). Run when cutting a release.
+
+set -euo pipefail
+
+gem_root="$(cd "$(dirname "$0")/.." && pwd)"
+workdir="$(mktemp -d)"
+appdir="$workdir/smoke_app"
+trap 'rm -rf "$workdir"' EXIT
+
+unset BUNDLE_GEMFILE BUNDLE_PATH || true
+
+echo "==> rails new (throwaway app in $workdir)"
+(cd "$workdir" && rails new smoke_app --api --quiet \
+  --skip-test --skip-system-test --skip-action-mailer --skip-action-mailbox \
+  --skip-action-text --skip-active-storage --skip-action-cable --skip-bootsnap \
+  --skip-git --skip-kamal --skip-solid --skip-ci --skip-rubocop --skip-brakeman \
+  --skip-docker --skip-jbuilder --skip-dev-gems --skip-bundle)
+
+echo "==> wiring Gemfile to the git-sourced gem"
+cat >> "$appdir/Gemfile" <<GEMFILE
+
+gem 'kaminari'
+gem 'layers', git: '${gem_root}'
+GEMFILE
+
+echo "==> writing layer stack"
+mkdir -p "$appdir/app/lib/use_cases/widgets" \
+         "$appdir/app/lib/user_stories/widgets" \
+         "$appdir/app/lib/queries"
+
+cat > "$appdir/app/lib/use_cases/application_use_case.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module UseCases
+  class ApplicationUseCase < Layers::BaseLayer
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/use_cases/widgets/create.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module UseCases
+  module Widgets
+    class Create < ApplicationUseCase
+      required :name
+
+      def call
+        widget = nil
+        ActiveRecord::Base.transaction do
+          widget = Widget.create!(name: name)
+        end
+        success(widget: widget)
+      rescue ActiveRecord::RecordInvalid => e
+        failure(errors: e.record.errors.full_messages)
+      end
+    end
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/user_stories/application_user_story.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module UserStories
+  class ApplicationUserStory < Layers::BaseLayer
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/user_stories/widgets/register.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module UserStories
+  module Widgets
+    class Register < ApplicationUserStory
+      required :name
+
+      observer :announce, of_event: :success
+
+      def call
+        UseCases::Widgets::Create.call(
+          name: name,
+          listener: self,
+          on_success: :widget_created,
+          on_failure: :widget_failed,
+        )
+      end
+
+      def widget_created(widget:)
+        success(widget: widget)
+      end
+
+      def widget_failed(errors: nil)
+        failure(errors: errors)
+      end
+
+      private
+
+      def announce
+        $smoke_events << :announced if $smoke_events
+        Rails.logger.info('widget registered')
+      end
+    end
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/queries/application_query.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Queries
+  class ApplicationQuery < Layers::BaseQueryObject
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/queries/widgets_query.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Queries
+  class WidgetsQuery < ApplicationQuery
+    relation_class 'Widget'
+
+    private
+
+    def build_relation_defaults!
+      @relation = relation.where.not(name: nil)
+    end
+  end
+end
+RUBY
+
+cat > "$appdir/app/models/widget.rb" <<'RUBY'
+# frozen_string_literal: true
+
+class Widget < ApplicationRecord
+  validates :name, presence: true
+end
+RUBY
+
+cat > "$appdir/app/controllers/widgets_controller.rb" <<'RUBY'
+# frozen_string_literal: true
+
+class WidgetsController < ApplicationController
+  def index
+    widgets = Queries::WidgetsQuery.new
+                                   .order(sort_field: :name, sort_direction: :asc)
+                                   .page(page)
+                                   .per(per)
+                                   .all
+    render json: widgets.map { |widget| { id: widget.id, name: widget.name } }
+  end
+
+  def create
+    UserStories::Widgets::Register.call(
+      name: params[:name].to_s,
+      listener: self,
+      on_success: :create_succeeded,
+      on_failure: :create_failed,
+    )
+  end
+
+  def create_succeeded(widget:)
+    render json: { id: widget.id, name: widget.name }, status: :created
+  end
+
+  def create_failed(errors: nil)
+    render json: { errors: Array(errors) }, status: :unprocessable_entity
+  end
+
+  private
+
+  def page
+    params.fetch(:page, 1).to_i
+  end
+
+  def per
+    params.fetch(:per, 2).to_i
+  end
+end
+RUBY
+
+cat > "$appdir/config/routes.rb" <<'RUBY'
+# frozen_string_literal: true
+
+Rails.application.routes.draw do
+  resources :widgets, only: [:index, :create]
+end
+RUBY
+
+cat > "$appdir/smoke_checks.rb" <<'RUBY'
+# frozen_string_literal: true
+
+$failures = []
+
+def check(name)
+  if yield
+    puts "ok - #{name}"
+  else
+    $failures << name
+    puts "NOT OK - #{name}"
+  end
+rescue StandardError => e
+  $failures << name
+  puts "NOT OK - #{name} (#{e.class}: #{e.message})"
+end
+
+ActiveRecord::Schema.define do
+  create_table :widgets, force: true do |t|
+    t.string :name
+    t.timestamps
+  end
+end
+
+check('eager loads under zeitwerk') do
+  Rails.application.eager_load!
+  true
+end
+
+check('Layers::Logger uses Rails.logger') do
+  Layers::Logger.logger.equal?(Rails.logger)
+end
+
+check('kaminari pagination adapter detected') do
+  Layers.configuration.pagination_adapter.equal?(Layers::Adapters::Pagination::Kaminari)
+end
+
+class ProbeListener
+  attr_reader :events
+
+  def initialize
+    @events = []
+  end
+
+  def on_success(**payload)
+    @events << [:success, payload]
+  end
+
+  def on_failure(**payload)
+    @events << [:failure, payload]
+  end
+end
+
+# --- use case, called directly ---
+
+probe = ProbeListener.new
+UseCases::Widgets::Create.call(name: 'sprocket', listener: probe)
+
+check('use case success callback fires') { probe.events.first&.first == :success }
+check('use case success payload persists the widget') do
+  probe.events.first.last[:widget].persisted?
+end
+
+probe = ProbeListener.new
+UseCases::Widgets::Create.call(name: '', listener: probe)
+
+check('use case failure callback fires') { probe.events.first&.first == :failure }
+check('use case failure payload carries errors') do
+  probe.events.first.last[:errors].any?
+end
+
+check('missing required input raises') do
+  UseCases::Widgets::Create.call(listener: ProbeListener.new)
+  false
+rescue Layers::DSL::MissingRequiredInputs
+  true
+end
+
+# --- user story orchestration with observer ---
+
+$smoke_events = []
+probe = ProbeListener.new
+UserStories::Widgets::Register.call(name: 'gadget', listener: probe)
+
+check('user story success callback fires') { probe.events.first&.first == :success }
+check('user story observer fired') { $smoke_events.include?(:announced) }
+
+# --- query object against a real AR relation ---
+
+Widget.delete_all
+['beta', 'alpha', 'gamma'].each { |name| Widget.create!(name: name) }
+
+check('query object counts through the relation') do
+  Queries::WidgetsQuery.new.count == 3
+end
+
+query = Queries::WidgetsQuery.new
+check('refiners return the query for chaining') do
+  query.order(sort_field: :name, sort_direction: :asc).equal?(query)
+end
+
+check('order + kaminari page/per narrow the results') do
+  names = Queries::WidgetsQuery.new
+                               .order(sort_field: :name, sort_direction: :asc)
+                               .page(1)
+                               .per(2)
+                               .all
+                               .map(&:name)
+  names == ['alpha', 'beta']
+end
+
+check('per before page raises PaginationError') do
+  Queries::WidgetsQuery.new.per(2)
+  false
+rescue Layers::QueryBuilder::PaginationError
+  true
+end
+
+# --- result objects ---
+
+check('result chains and_then') do
+  result = Layers::Result.success(1).and_then { |value| value + 1 }
+  result.success? && result.value == 2
+end
+
+check('result captures a raised error as failure') do
+  Layers::Result.success(1).and_then { raise ArgumentError, 'boom' }.failure?
+end
+
+# --- the controller-as-listener path, over HTTP in-process ---
+
+session = ActionDispatch::Integration::Session.new(Rails.application)
+session.host!('localhost')
+
+session.post('/widgets', params: { name: 'http-widget' }, as: :json)
+check('POST /widgets succeeds') { session.response.status == 201 }
+check('POST /widgets renders the widget') do
+  JSON.parse(session.response.body)['name'] == 'http-widget'
+end
+
+session.post('/widgets', params: { name: '' }, as: :json)
+check('POST /widgets with invalid input is unprocessable') do
+  session.response.status == 422
+end
+check('failure response carries errors') do
+  JSON.parse(session.response.body)['errors'].any?
+end
+
+session.get('/widgets', params: { page: 1, per: 2 })
+check('GET /widgets returns ok') { session.response.status == 200 }
+check('GET /widgets returns the paginated collection') do
+  JSON.parse(session.response.body).map { |w| w['name'] } == ['alpha', 'beta']
+end
+
+puts
+if $failures.empty?
+  puts 'SMOKE TEST PASSED'
+else
+  puts "SMOKE TEST FAILED: #{$failures.join(', ')}"
+  exit 1
+end
+RUBY
+
+echo "==> bundle install"
+(cd "$appdir" && bundle install --quiet)
+
+echo "==> running smoke checks"
+(cd "$appdir" && bin/rails runner smoke_checks.rb)

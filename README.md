@@ -537,6 +537,16 @@ $ bin/setup
 $ bundle exec rspec
 ```
 
+Before cutting a release, run the consumer smoke test. It generates a throwaway
+API-only Rails app, installs the gem from this repository as a git source (committed
+HEAD only — uncommitted changes are invisible to it), builds a small layer stack the
+way a host app would (`app/lib/use_cases`, `app/lib/user_stories`, `app/lib/queries`,
+a controller as listener), and exercises everything directly and over HTTP:
+
+```bash
+$ bin/smoke_test
+```
+
 ## License
 
 This project is licensed under the MIT License — see [LICENSE.txt](LICENSE.txt) for
