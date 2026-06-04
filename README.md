@@ -443,9 +443,11 @@ What the client sees is controllable:
 
 Configuration mistakes fail loudly for the developer: a missing or non-constantizable
 `user_story` raises `InvalidUserStory`; a `user_story_arg` without a backing method
-raises `InvalidUserStoryArgumentMethod`. Both surface through the execution error —
-masked in production, explanatory in the logs and wherever `reveal_masked_errors` is
-on. Endpoints that do not define `on_success`/`on_failure` raise `NotImplementedError`.
+raises `InvalidUserStoryArgumentMethod`. These wiring errors are never converted to
+execution errors — they raise as themselves, landing in your logs and error tracking
+with full detail, while the GraphQL server shows clients its own generic internal
+error. Endpoints that do not define `on_success`/`on_failure` raise
+`NotImplementedError`.
 
 ## Configuration and Logging
 
@@ -469,8 +471,8 @@ graphql-ruby needs no configuration at all.
 The gem logs through `Layers::Logger.logger`, which resolves in order:
 
 1. The configured logger
-2. `Rails.logger`, when Rails is present outside production
-3. Its own file logger writing to `log/layers.log`
+2. `Rails.logger`, whenever Rails provides one (production included)
+3. Its own `$stdout` logger
 
 ## Best Practices
 

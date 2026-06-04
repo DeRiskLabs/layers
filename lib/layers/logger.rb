@@ -5,8 +5,8 @@ require 'singleton'
 
 module Layers
 
-  # Extends ::Logger as a singleton; uses Rails.logger in a Rails environment
-  # or its own log file.
+  # Resolves to the configured logger, Rails.logger when present, or its own
+  # $stdout singleton.
   class Logger < ::Logger
 
     include Singleton
@@ -14,23 +14,22 @@ module Layers
     class << self
 
       def logger
-        @logger ||= if Layers.configuration&.logger
-                      Layers.configuration.logger
-                    elsif defined?(Rails) && !Rails.env.production? && Rails.logger
-                      Rails.logger
-                    else
-                      Layers::Logger.instance
-                    end
+        @logger ||= Layers.configuration.logger || rails_logger || instance
+      end
+
+
+      private
+
+      def rails_logger
+        return unless defined?(Rails)
+
+        Rails.logger
       end
 
     end
 
     def initialize
-      if defined?(Rails)
-        super(Rails.root.join('log/layers.log'))
-      else
-        super(File.open('log/layers.log', 'a'))
-      end
+      super($stdout)
     end
 
   end

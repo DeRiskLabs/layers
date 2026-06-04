@@ -55,6 +55,7 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
     subject(:endpoint) { test_class.new }
 
     let(:user_story_class) { spy('UserStoryClass') }
+    let(:logger) { instance_spy(Logger) }
 
     let(:test_class) do
       Class.new do
@@ -66,6 +67,7 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
     before do
       stub_const('CreateWidget', user_story_class)
       stub_const('GraphQL::ExecutionError', Class.new(StandardError))
+      allow(Layers::Logger).to receive(:logger).and_return(logger)
     end
 
     context 'with a declared user story' do
@@ -164,10 +166,10 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end
       end
 
-      it 'raises ExecutionError' do
+      it 'raises InvalidUserStory' do
         expect do
           endpoint.resolve(id: 1)
-        end.to raise_error(GraphQL::ExecutionError)
+        end.to raise_error(described_class::InvalidUserStory)
       end
     end
 
@@ -179,14 +181,10 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end
       end
 
-      before do
-        Layers.configure { |config| config.reveal_masked_errors = true }
-      end
-
-      it 'raises ExecutionError explaining the failure' do
+      it 'raises InvalidUserStory explaining the failure' do
         expect do
           endpoint.resolve(id: 1)
-        end.to raise_error(GraphQL::ExecutionError, /did not constantize/)
+        end.to raise_error(described_class::InvalidUserStory, /did not constantize/)
       end
     end
 
@@ -199,14 +197,11 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
         end
       end
 
-      before do
-        Layers.configure { |config| config.reveal_masked_errors = true }
-      end
-
-      it 'raises ExecutionError naming the missing method' do
+      it 'raises InvalidUserStoryArgumentMethod naming the missing method' do
         expect do
           endpoint.resolve(id: 1)
-        end.to raise_error(GraphQL::ExecutionError, /user_story_arg :widget/)
+        end.to raise_error(described_class::InvalidUserStoryArgumentMethod,
+                           /user_story_arg :widget/)
       end
     end
 
@@ -222,12 +217,6 @@ RSpec.describe Layers::Graphql::BaseEndpoint do
       end
 
       context 'with the logger observed' do
-        let(:logger) { instance_spy(Logger) }
-
-        before do
-          allow(Layers::Logger).to receive(:logger).and_return(logger)
-        end
-
         execute do
           endpoint.resolve(id: 1)
         rescue GraphQL::ExecutionError

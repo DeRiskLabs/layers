@@ -65,6 +65,13 @@ Latent defects carried over from the embedded application copy:
   `'Internal error'`). Errors of the execution error class pass through
   untouched; `exposed_error_classes` allowlists others;
   `reveal_masked_errors` restores full messages for development
+- Gem wiring errors (`InvalidUserStory`, `InvalidUserStoryArgumentMethod`)
+  raise as themselves instead of being converted to execution errors —
+  GraphQL servers render clients a generic internal error while error
+  tracking keeps the full source
+- `Layers::Logger.logger` prefers `Rails.logger` whenever Rails provides one
+  (production included) and falls back to a `$stdout` logger standalone — the
+  old `log/layers.log` file logger crashed when the directory was missing
 
 ### Removed
 

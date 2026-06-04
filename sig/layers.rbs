@@ -259,6 +259,8 @@ module Layers
         def initialize: (Symbol? method_name) -> void
       end
 
+      WIRING_ERRORS: Array[Class]
+
       def self.included: (Module base) -> void
 
       module ClassMethods
@@ -286,6 +288,7 @@ module Layers
       def expose_error?: (Exception error) -> bool
       def log_masked_error: (Exception error) -> void
       def logger: () -> untyped
+      def wiring_error?: (Exception error) -> bool
       def user_story: () -> untyped
       def user_story_args: () -> Hash[Symbol, untyped]
     end

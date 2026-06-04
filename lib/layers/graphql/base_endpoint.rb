@@ -16,6 +16,8 @@ module Layers
 
       end
 
+      WIRING_ERRORS = [InvalidUserStory, InvalidUserStoryArgumentMethod].freeze
+
       def self.included(base)
         base.extend(ClassMethods)
       end
@@ -55,6 +57,7 @@ module Layers
         execute!
 
       rescue StandardError => e
+        raise e if wiring_error?(e)
         raise e if e.is_a?(execution_error_class)
 
         raise execution_error_class, client_facing_message(e)
@@ -135,6 +138,10 @@ module Layers
 
       rescue NameError
         raise InvalidUserStory, "User story name '#{class_name}' did not constantize."
+      end
+
+      def wiring_error?(error)
+        WIRING_ERRORS.any? { |klass| error.is_a?(klass) }
       end
 
       def user_story_args
