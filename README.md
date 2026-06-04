@@ -30,6 +30,17 @@ The gem provides three building blocks:
 | `Layers::BaseQueryObject` | Base class for scoped, chainable read objects |
 | `Layers::Graphql::BaseEndpoint` | Declarative GraphQL mutation/resolver integration |
 
+## Contents
+
+- [Core Concepts](#core-concepts) — the lifecycle, the message protocol, and which
+  layer to write
+- [Defining a Layer](#defining-a-layer) — inputs, `#call`, listeners, observers
+- [Query Objects](#query-objects) — scoped, chainable reads
+- [GraphQL Endpoints](#graphql-endpoints) — declarative mutations and resolvers
+- [Configuration and Logging](#configuration-and-logging)
+- [Best Practices](#best-practices)
+- [Error Reference](#error-reference)
+
 ## Requirements
 
 - Ruby >= 3.1
@@ -80,7 +91,28 @@ Inside `#call`, report the outcome — do not return it:
   the failure callback on the listener with `args`
 
 After execution the layer also answers `success?`, `failure?`, and exposes the reported
-args as `result`.
+args as `result` (positional args, when used, appear under `:success_args` /
+`:failure_args`).
+
+### User stories and use cases (ports & adapters)
+
+Both inherit `Layers::BaseLayer` and behave identically; they exist for different
+architectural reasons:
+
+- A **user story** is the boundary of a user interaction — the way out of the delivery
+  layer (controller stack, GraphQL endpoint, any user interaction point) into business
+  logic and back. That is why a controller or mutation calls a user story: crossing it
+  exits the framework entirely, and nothing below it knows the delivery mechanism.
+- A **use case** is the entry point to business logic. It performs or coordinates one
+  unit of work inside its bounded context and calls back to its listener when that work
+  is complete. Its caller can be a user story, a background job, or any other actor in
+  the system.
+
+**Direction rule: a use case never calls a user story.** User interaction boundary →
+business logic, never the reverse.
+
+Background jobs follow the same shape as controllers: a thin boundary that deserializes
+its arguments and calls a use case as listener.
 
 ### Recommended base classes
 
@@ -109,7 +141,8 @@ input as undeclared. Every concrete layer states its complete contract in its ow
 
 ### Declaring inputs
 
-Declare what the layer needs with the inputs DSL. Each declaration creates an accessor:
+Declare what the layer needs with the inputs DSL. Each declaration creates a reader and
+a writer:
 
 ```ruby
 class UseCases::Members::CreateSeller < BaseUseCase
@@ -126,6 +159,10 @@ Input validation happens at construction:
 
 Instances expose `inputs` (the raw hash), and `attributes`, `required_attributes`, and
 `optional_attributes` (declared inputs with their current values).
+
+The writers are deliberate: inputs may be injected or replaced after construction —
+useful when composing layers and in tests. Construction-time validation still
+guarantees the declared contract was honoured at the boundary.
 
 Declarations are per-class (see Recommended base classes): the concrete class's file
 always shows its complete input contract.
@@ -169,7 +206,10 @@ module UseCases
 end
 ```
 
-A layer that does not implement `#call` raises `NotImplementedError` when called.
+A layer that does not implement `#call` raises `NotImplementedError` when called. A
+`TypeError` during `.call` caused by a missing method — almost always a broken
+`delegate` — is re-raised as `MissingMethodError`, naming the method, the class, and
+the location.
 
 ### Listeners and callbacks
 
@@ -355,6 +395,28 @@ query.order(sort_field: :title, sort_direction: :asc).page(2).per(25).all
 - `page(n)` then `per(size)` — pagination. Calling `per` before `page` raises
   `Layers::QueryBuilder::PaginationError`.
 
+Add your own refiners with the same shape — mutate `@relation`, return `self`:
+
+```ruby
+module Queries
+  class ArticlesQuery < Layers::BaseQueryObject
+    # ...
+
+    def with_status(status)
+      @relation = relation.where(status: status)
+      self
+    end
+  end
+end
+```
+
+Order matters: **refiners first, terminators last**. Delegated read messages return
+relations or values — not the query object — so a `where` mid-chain exits the query
+object and everything after it is plain ActiveRecord, not your refiners.
+
+The delegated read list is deliberately finite; add app-wide delegations (or shared
+refiners and pagination conventions) in your own `ApplicationQuery` base class.
+
 Pagination goes through an adapter, so the query object never knows which pagination
 gem the host app uses. Kaminari is detected automatically; otherwise the will_paginate
 message style (`page`/`per_page`) is used. Any object answering
@@ -426,7 +488,9 @@ How `resolve` works:
 1. If the GraphQL `context` already has errors, it returns without running anything.
 2. The resolver's arguments are captured as `initial_resolve_args`.
 3. Each `user_story_arg` is resolved by calling the named method (`method:` option) or
-   a method matching the arg name, and merged over the resolve args.
+   a method matching the arg name, and merged over the resolve args. Because these
+   values come from the endpoint — never from client input — `user_story_arg` is the
+   place to inject trusted context, such as the authenticated identity from `context`.
 4. The user story is called with the endpoint as listener
    (`on_success: :success, on_failure: :failure`), which dispatches to your
    `on_success`/`on_failure` methods.
@@ -489,26 +553,23 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
 
 ## Best Practices
 
-### Layer organization
-
-1. Keep layers focused and single-purpose
-2. Use user stories for framework integration and orchestration
-3. Put core business logic in use cases
-4. Use observers for side effects
-
-### Error handling
-
-1. Use the failure/success protocol consistently
-2. Include meaningful error messages
-3. Log errors appropriately
-4. Handle all error cases explicitly
-
-### Testing
-
-1. Test each layer in isolation
-2. Mock dependencies in unit tests
-3. Write integration tests for user stories
-4. Test both success and failure paths
+- **One action per layer.** If a use case's description needs "and", split it and let a
+  user story compose the pieces.
+- **Report, don't return.** Everything a caller needs travels through the
+  `success`/`failure` payload. Keep the payload keys stable and meaningful
+  (`success(seller:)`, `failure(registration:)`) — they are the contract listeners
+  depend on.
+- **Side effects ride on observers** (emails, follow-on use cases), never buried in
+  `#call`.
+- **Authorization and existence checks live in user stories**, not use cases — a use
+  case trusts it was invoked legitimately and does its one job.
+- **Reads belong in query objects** the moment scopes multiply, take parameters, or
+  grow joins.
+- **No framework below the boundary.** Nothing under the delivery adapter mentions
+  HTTP, GraphQL, or the controller; user stories and use cases run identically from a
+  console, a job, or a spec.
+- **Test through the protocol.** Drive a layer with a listener double and assert the
+  callback and its payload — success and failure paths both.
 
 ## Error Reference
 
