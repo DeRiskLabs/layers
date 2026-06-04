@@ -22,13 +22,12 @@ architecture principles:
 - **Testability**: every layer is a plain Ruby object with declared inputs and
   observable outcomes
 
-The gem provides four building blocks:
+The gem provides three building blocks:
 
 | Class | Purpose |
 | --- | --- |
 | `Layers::BaseLayer` | Base class for use cases, user stories, and other business operations |
 | `Layers::BaseQueryObject` | Base class for scoped, chainable read objects |
-| `Layers::Result` | A success/failure value object for return-value style flows |
 | `Layers::Graphql::BaseEndpoint` | Declarative GraphQL mutation/resolver integration |
 
 ## Requirements
@@ -363,37 +362,6 @@ Layers.configure do |config|
   config.relation_adapter = Layers::Adapters::Relation::DuckType
 end
 ```
-
-## Results
-
-`Layers::Result` is a value object for flows where you want an inspectable outcome
-instead of (or alongside) listener callbacks:
-
-```ruby
-result = Layers::Result.success(order, { source: 'checkout' })
-result = Layers::Result.failure('Card declined')
-
-result.success?    # => true / false
-result.failure?    # => the opposite
-result.value       # => the success payload
-result.errors      # => always an array; strings, exceptions, and single values are normalized
-result.metadata    # => the metadata hash
-result.to_h        # => { success:, value:/errors:, metadata: }
-```
-
-Results chain:
-
-```ruby
-Layers::Result.success(params)
-  .and_then { |params| build_order(params) }     # runs only on success
-  .and_then { |order| charge(order) }            # a raised error becomes a failure result
-  .on_success { |charge| notify(charge) }        # tap-style; returns self
-  .on_failure { |errors| log(errors) }           # tap-style; returns self
-```
-
-`and_then` passes the value to the block. A block returning a `Result` is used as-is;
-any other return value is wrapped in a success carrying the metadata forward; a raised
-`StandardError` becomes a failure with the exception class recorded in the metadata.
 
 ## GraphQL Endpoints
 

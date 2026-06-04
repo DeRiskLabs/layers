@@ -40,10 +40,7 @@ module Layers
 
     def failure(*failure_args, **failure_opts)
       @failed = true
-
-      @result = failure_opts.tap do |opts|
-        opts.merge(failure_args: failure_args) unless failure_args.empty?
-      end
+      @result = result_payload(failure_opts, failure_args, key: :failure_args)
 
       notify_observers(of_event: :failure)
       listener.public_send(on_failure, *failure_args, **failure_opts)
@@ -51,13 +48,16 @@ module Layers
 
     def success(*success_args, **success_opts)
       @succeeded = true
-
-      @result = success_opts.tap do |opts|
-        opts.merge(success_args: success_args) unless success_args.empty?
-      end
+      @result = result_payload(success_opts, success_args, key: :success_args)
 
       notify_observers(of_event: :success)
       listener.public_send(on_success, *success_args, **success_opts)
+    end
+
+    def result_payload(opts, args, key:)
+      return opts if args.empty?
+
+      opts.merge(key => args)
     end
   end
 end

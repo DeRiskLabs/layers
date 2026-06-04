@@ -88,6 +88,34 @@ RSpec.describe Layers::BaseLayer do
       it 'calls the success callback on the listener' do
         expect(listener).to have_received(:on_success).with(result: true)
       end
+
+      it 'exposes the payload as the result' do
+        expect(layer.result).to eq(result: true)
+      end
+    end
+
+    describe '#success with positional args' do
+      subject(:layer) { success_class.new(listener: listener) }
+
+      let(:success_class) do
+        Class.new(described_class) do
+          def call
+            success('extra', result: true)
+          end
+        end
+      end
+
+      execute do
+        layer.call
+      end
+
+      it 'passes the positional args to the listener' do
+        expect(listener).to have_received(:on_success).with('extra', result: true)
+      end
+
+      it 'captures the positional args in the result' do
+        expect(layer.result).to eq(result: true, success_args: ['extra'])
+      end
     end
 
     describe '#failure' do
@@ -114,6 +142,34 @@ RSpec.describe Layers::BaseLayer do
 
       it 'calls the failure callback on the listener' do
         expect(listener).to have_received(:on_failure).with(error: 'test')
+      end
+
+      it 'exposes the payload as the result' do
+        expect(layer.result).to eq(error: 'test')
+      end
+    end
+
+    describe '#failure with positional args' do
+      subject(:layer) { failure_class.new(listener: listener) }
+
+      let(:failure_class) do
+        Class.new(described_class) do
+          def call
+            failure('extra', error: 'test')
+          end
+        end
+      end
+
+      execute do
+        layer.call
+      end
+
+      it 'passes the positional args to the listener' do
+        expect(listener).to have_received(:on_failure).with('extra', error: 'test')
+      end
+
+      it 'captures the positional args in the result' do
+        expect(layer.result).to eq(error: 'test', failure_args: ['extra'])
       end
     end
   end

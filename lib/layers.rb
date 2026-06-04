@@ -11,7 +11,6 @@ require 'layers/errors'
 require 'layers/adapters'
 require 'layers/configuration'
 require 'layers/logger'
-require 'layers/result'
 
 require 'layers/dsl'
 require 'layers/base_layer'

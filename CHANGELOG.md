@@ -27,8 +27,6 @@ distribution from a private git source.
 - `Layers::BaseQueryObject` — scoped, chainable query objects with
   `relation_class` defaults, relation validation, delegated read messages, and
   the `QueryBuilder` mixins (`RelationDefaults`, `Paginate`, `Sort`)
-- `Layers::Result` — success/failure value object with error normalization,
-  `and_then` chaining, and `on_success` / `on_failure` taps
 - `Layers::Graphql::BaseEndpoint` — declarative `user_story` /
   `user_story_arg` wiring from GraphQL mutations and resolvers to user
   stories, with `GraphQL::ExecutionError` wrapping
@@ -43,7 +41,7 @@ distribution from a private git source.
     available raises `Layers::ConfigurationError`
 - `Layers.configure` and `Layers::Logger` — configurable logging with
   Rails-aware fallbacks
-- Full RSpec suite (189 examples) covering every public contract
+- Full RSpec suite covering every public contract
 
 ### Fixed
 
@@ -54,7 +52,13 @@ Latent defects carried over from the embedded application copy:
 - `layers/graphql.rb` required nonexistent `endpoint_builder` files
 - `Graphql::BaseEndpoint` referenced an undefined `InvalidUserStoryError`
   constant (the class is `InvalidUserStory`)
-- `Layers::Result` was never required, making the class unreachable for
-  consumers of `require 'layers'`
+- `BaseLayer#result` silently dropped positional success/failure args (a
+  `tap` over a non-destructive `merge`)
 - `camelize` / `constantize` / `present?` were unavailable outside Rails: the
   gem now requires the ActiveSupport core extensions it relies on
+
+### Removed
+
+- `Layers::Result` — the ask-style result-object pattern carried over from the
+  embedded copy conflicts with the gem's message-passing design; outcomes
+  travel only as `success`/`failure` listener callbacks

@@ -33,30 +33,6 @@ module Layers
     def self.logger: () -> untyped
   end
 
-  class Result
-    attr_reader success: bool
-    attr_reader value: untyped
-    attr_reader errors: Array[untyped]
-    attr_reader metadata: Hash[untyped, untyped]
-
-    def self.success: (?untyped value, ?Hash[untyped, untyped] metadata) -> Result
-
-    def self.failure: (?untyped errors, ?Hash[untyped, untyped] metadata) -> Result
-
-    def initialize: (success: bool, ?value: untyped, ?errors: untyped, ?metadata: Hash[untyped, untyped]) -> void
-
-    def success?: () -> bool
-    def failure?: () -> bool
-    def and_then: () { (untyped value) -> untyped } -> Result
-    def on_success: () { (untyped value) -> void } -> Result
-    def on_failure: () { (Array[untyped] errors) -> void } -> Result
-    def to_h: () -> Hash[Symbol, untyped]
-
-    private
-
-    def normalize_errors: (untyped errors) -> Array[untyped]
-  end
-
   module DSL
     class MissingRequiredInputs < ArgumentError
     end
@@ -193,6 +169,7 @@ module Layers
 
     def failure: (*untyped failure_args, **untyped failure_opts) -> untyped
     def success: (*untyped success_args, **untyped success_opts) -> untyped
+    def result_payload: (Hash[Symbol, untyped] opts, Array[untyped] args, key: Symbol) -> Hash[Symbol, untyped]
   end
 
   module QueryBuilder

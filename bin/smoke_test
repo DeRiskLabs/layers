@@ -314,17 +314,6 @@ rescue Layers::QueryBuilder::PaginationError
   true
 end
 
-# --- result objects ---
-
-check('result chains and_then') do
-  result = Layers::Result.success(1).and_then { |value| value + 1 }
-  result.success? && result.value == 2
-end
-
-check('result captures a raised error as failure') do
-  Layers::Result.success(1).and_then { raise ArgumentError, 'boom' }.failure?
-end
-
 # --- the controller-as-listener path, over HTTP in-process ---
 
 session = ActionDispatch::Integration::Session.new(Rails.application)
