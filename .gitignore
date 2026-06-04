@@ -7,3 +7,19 @@
 /spec/reports/
 /tmp/
 Gemfile.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Editor cruft
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
