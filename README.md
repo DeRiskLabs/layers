@@ -98,6 +98,13 @@ end
 - **User stories** (`UserStories::*`) orchestrate a user-facing action: they coordinate
   use cases, forms, and query objects
 
+Keep base classes **behavioural** (includes, shared private helpers) and leave the
+declarations to the concrete classes. All class-level declarations — `required` /
+`optional` / `optional_with_default`, `observer`, `default_callbacks` — are
+**per-class by design**: they apply only to the class that declares them and are not
+inherited. A `required` on a base class does not flow down; subclasses will reject that
+input as undeclared. Every concrete layer states its complete contract in its own file.
+
 ## Defining a Layer
 
 ### Declaring inputs
@@ -119,6 +126,9 @@ Input validation happens at construction:
 
 Instances expose `inputs` (the raw hash), and `attributes`, `required_attributes`, and
 `optional_attributes` (declared inputs with their current values).
+
+Declarations are per-class (see Recommended base classes): the concrete class's file
+always shows its complete input contract.
 
 ### Implementing #call
 
@@ -246,6 +256,9 @@ module UserStories
   end
 end
 ```
+
+Like all class-level declarations, `observer` is per-class — observers act only on
+objects of the class that declared them, never on subclasses.
 
 `observer` defaults to `of_event: :success`; use `of_event: :failure` for failure-side
 effects. An exception raised by an observer never breaks the layer: it is logged (see
