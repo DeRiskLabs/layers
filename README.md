@@ -91,6 +91,10 @@ Inside `#call`, report the outcome — do not return it:
 - `failure(**args)` — marks the layer failed, notifies failure observers, then calls
   the failure callback on the listener with `args`
 
+A failure payload always carries the means to render errors: an object that responds to
+`.errors` (a form, a record), or an errors collection itself (`failure(errors: [...])`).
+Any failure handler can then extract errors without knowing what failed.
+
 After execution the layer also answers `success?`, `failure?`, and exposes the reported
 args as `result` (positional args, when used, appear under `:success_args` /
 `:failure_args`).
@@ -649,6 +653,9 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
   `success`/`failure` payload. Keep the payload keys stable and meaningful
   (`success(seller:)`, `failure(registration:)`) — they are the contract listeners
   depend on.
+- **Failures carry errors.** Every failure payload includes an object responding to
+  `.errors` (form, record) or an errors collection itself, so any listener renders
+  errors without knowing what failed.
 - **Side effects ride on observers** (emails, follow-on use cases), never buried in
   `#call`.
 - **Authorization and existence checks live in user stories**, not use cases — a use
