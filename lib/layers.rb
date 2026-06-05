@@ -12,6 +12,7 @@ require 'layers/adapters'
 require 'layers/configuration'
 require 'layers/logger'
 require 'layers/instrumenter'
+require 'layers/registry'
 
 require 'layers/dsl'
 require 'layers/base_layer'
@@ -19,6 +20,7 @@ require 'layers/base_layer'
 require 'layers/query_builder'
 require 'layers/base_query_object'
 
+require 'layers/base_job'
 require 'layers/graphql/base_endpoint'
 
 module Layers

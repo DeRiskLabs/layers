@@ -322,6 +322,61 @@ module Layers
     def build_relation_defaults!: () -> void
   end
 
+  module BaseJob
+    class InvalidUseCase < Layers::Error
+    end
+
+    class JobFailed < Layers::Error
+    end
+
+    def self.included: (Module base) -> void
+
+    module ClassMethods
+      def use_case: (String name_string) -> String
+      def use_case_class_name: () -> String?
+    end
+
+    def perform: (**untyped perform_args) -> untyped
+    def success: (**untyped return_args) -> untyped
+    def failure: (**untyped return_args) -> untyped
+    def on_success: (**untyped args) -> void
+    def on_failure: (**untyped args) -> untyped
+
+    private
+
+    def use_case: () -> untyped
+    def failed_message: (Hash[Symbol, untyped] args) -> String
+    def failure_messages: (Hash[Symbol, untyped] args) -> Array[String]
+    def extracted_errors: (untyped value) -> Array[String]
+  end
+
+  class Registry
+    class NotRegistered < Layers::Error
+    end
+
+    class InvalidEntry < Layers::Error
+    end
+
+    def self.suffix: (Symbol name) -> Symbol
+    def self.suffix_name: () -> Symbol?
+
+    def initialize: (?Hash[Symbol | String, untyped] entries) -> void
+
+    def []: (Symbol | String name) -> untyped
+    def registered?: (Symbol | String name) -> bool
+    def to_h: () -> Hash[Symbol, untyped]
+    def names: () -> Array[Symbol]
+
+    private
+
+    attr_reader entries: Hash[Symbol, untyped]
+
+    def registered_name: (Symbol | String name) -> Symbol?
+    def candidates: (Symbol | String name) -> Array[Symbol]
+    def suffixed_name: (Symbol | String name) -> Symbol?
+    def resolve: (Symbol key) -> untyped
+  end
+
   module Graphql
     module BaseEndpoint
       class InvalidUserStory < Layers::Error

@@ -43,6 +43,14 @@ distribution from a private git source.
   classes are inserted between a layer and its listener as a callback daisy
   chain; subclasses implement `instrument!(outcome)` with the subject, the
   outcome payload, and timing helpers available
+- `Layers::BaseJob` — jobs as thin boundaries: `use_case '...'` declares the
+  behaviour, `perform(**args)` runs it with the job as listener, and the
+  default `on_failure` raises `JobFailed` (messages extracted per the failure
+  contract) so queue retry semantics engage
+- `Layers::Registry` — boot-injected name→class registries for component
+  boundaries: lazy constantize with memoization, pass-through for non-string
+  entries, and a per-class `suffix` macro for `registry[:identity]`
+  convenience
 - the `emits` macro — declares the payload keys success/failure carry,
   enforced at both ends: emitted payloads must match exactly
   (`MissingDeclaredOutputs`/`UndeclaredOutputs`), and wired listener

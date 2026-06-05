@@ -22,13 +22,16 @@ architecture principles:
 - **Testability**: every layer is a plain Ruby object with declared inputs and
   observable outcomes
 
-The gem provides three building blocks:
+The gem provides six building blocks:
 
 | Class | Purpose |
 | --- | --- |
 | `Layers::BaseLayer` | Base class for use cases, user stories, and other business operations |
 | `Layers::BaseQueryObject` | Base class for scoped, chainable read objects |
 | `Layers::Graphql::BaseEndpoint` | Declarative GraphQL mutation/resolver integration |
+| `Layers::BaseJob` | Jobs as thin boundaries: deserialize, call a use case, map outcome to queue semantics |
+| `Layers::Registry` | Boot-injected name→class registries for component boundaries |
+| `Layers::Instrumenter` | Listener-chain instrumentation via the `instrument` macro |
 
 ## Contents
 
@@ -38,6 +41,8 @@ The gem provides three building blocks:
   instrumentation
 - [Query Objects](#query-objects) — scoped, chainable reads
 - [GraphQL Endpoints](#graphql-endpoints) — declarative mutations and resolvers
+- [Background Jobs](#background-jobs) — jobs as thin boundaries
+- [Registries](#registries) — boot-injected component dependencies
 - [Configuration and Logging](#configuration-and-logging)
 - [Best Practices](#best-practices)
 - [Error Reference](#error-reference)
@@ -620,6 +625,65 @@ with full detail, while the GraphQL server shows clients its own generic interna
 error. Endpoints that do not define `on_success`/`on_failure` raise
 `NotImplementedError`.
 
+## Background Jobs
+
+`Layers::BaseJob` makes a job the same thin boundary a controller is: deserialize
+arguments, call a use case as listener, map the outcome to queue semantics.
+
+```ruby
+class ApplicationJob < ActiveJob::Base
+  include Layers::BaseJob
+end
+
+class SendDigestJob < ApplicationJob
+  use_case 'use_cases/collaborations/send_digest'
+end
+```
+
+`perform(**args)` runs the declared use case with the job as listener
+(`on_success: :success, on_failure: :failure`). The defaults:
+
+- `on_success` is a no-op — the job simply completes.
+- `on_failure` raises `Layers::BaseJob::JobFailed` carrying the failure payload's error
+  messages (extracted per the failure contract: objects responding to `.errors`, or
+  errors collections), so the queue's retry machinery engages. Target it with
+  `retry_on`/`discard_on`, or override `on_failure` for custom semantics.
+
+A missing or non-constantizable `use_case` raises `InvalidUseCase`. The mixin has no
+ActiveJob dependency — any object with this `perform` convention works.
+
+## Registries
+
+Components (unbuilt gems in `lib/`) reach host-owned classes through a registry
+injected at boot, instead of naming constants directly. `Layers::Registry` maps names
+to constantizable strings, resolved lazily and memoized:
+
+```ruby
+class RepositoryRegistry < Layers::Registry
+  suffix :repository
+end
+
+registry = RepositoryRegistry.new(
+  identity_repository: 'Identity',
+  collab_repository: 'Collab::Record',
+)
+
+registry[:identity_repository]   # => Identity
+registry[:identity]              # => Identity (suffix-aware convenience)
+registry.to_h                    # => { identity_repository: 'Identity', ... }
+```
+
+- Entries are constantized lazily on first access — the registry can be built before
+  the host's classes load — and resolved entries are memoized.
+- Non-string entries pass through untouched, so tests register doubles or classes
+  directly. An entry only has to duck-type to what the component asks of it.
+- An unknown name raises `Layers::Registry::NotRegistered`; a string that does not
+  constantize raises `Layers::Registry::InvalidEntry`.
+- `suffix` is per-class, like every declaration.
+
+The container application builds registries at boot and injects them into each
+component; the component never names host constants.
+
 ## Configuration and Logging
 
 `Layers.configure` is the single place the gem learns about its host:
@@ -685,6 +749,10 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
 | `Layers::QueryBuilder::PaginationError` | `per` was called before `page` |
 | `Layers::Graphql::BaseEndpoint::InvalidUserStory` | No `user_story` declared, or it did not constantize |
 | `Layers::Graphql::BaseEndpoint::InvalidUserStoryArgumentMethod` | A `user_story_arg` has no backing method |
+| `Layers::BaseJob::InvalidUseCase` | No `use_case` declared, or it did not constantize |
+| `Layers::BaseJob::JobFailed` | The default `on_failure` — raised so the queue's retry machinery engages |
+| `Layers::Registry::NotRegistered` | A registry lookup for an unknown name |
+| `Layers::Registry::InvalidEntry` | A registry entry string that did not constantize |
 
 ## Development
 
