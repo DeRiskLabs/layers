@@ -25,7 +25,7 @@ module Layers
       end
 
       def fire_and_forget?
-        @fire_and_forget == true
+        !!@fire_and_forget
       end
     end
 
