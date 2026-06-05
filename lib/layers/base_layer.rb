@@ -1,17 +1,14 @@
 # frozen_string_literal: true
 
 module Layers
-
-  # The base for layer objects (use cases, user stories): inputs, observers,
-  # listener callbacks, and class-level .call.
   class BaseLayer
-
     include Layers::DSL::Observers
     include Layers::DSL::Inputs
     include Layers::DSL::NullListener
     include Layers::DSL::CallbackDefaults
     include Layers::DSL::ClassCallable
     include Layers::DSL::Instrumented
+    include Layers::DSL::Emits
 
     attr_reader :listener,
                 :on_failure,
@@ -25,6 +22,7 @@ module Layers
       @on_failure = on_failure || self.class.on_failure_default
       @on_success = on_success || self.class.on_success_default
 
+      verify_listener_contract!
       insert_instrumenters!
 
       super(opts)
@@ -42,6 +40,7 @@ module Layers
     private
 
     def failure(*failure_args, **failure_opts)
+      validate_emitted!(:failure, failure_opts)
       @failed = true
       @result = result_payload(failure_opts, failure_args, key: :failure_args)
 
@@ -50,6 +49,7 @@ module Layers
     end
 
     def success(*success_args, **success_opts)
+      validate_emitted!(:success, success_opts)
       @succeeded = true
       @result = result_payload(success_opts, success_args, key: :success_args)
 

@@ -7,6 +7,9 @@ module Layers
   class ConfigurationError < Error
   end
 
+  class ContractViolation < Error
+  end
+
   def self.configuration: () -> Configuration
 
   def self.configure: () { (Configuration) -> void } -> void
@@ -67,7 +70,37 @@ module Layers
     class UnexpectedInputs < ArgumentError
     end
 
+    class MissingDeclaredOutputs < Layers::Error
+    end
+
+    class UndeclaredOutputs < Layers::Error
+    end
+
     class NotImplementedError < ::NotImplementedError
+    end
+
+    module Emits
+      def self.included: (Module base) -> void
+
+      module ClassMethods
+        def emits: (?success: Array[Symbol]?, ?failure: Array[Symbol]?) -> void
+        def emitted_success_keys: () -> Set[Symbol]?
+        def emitted_failure_keys: () -> Set[Symbol]?
+      end
+
+      private
+
+      def validate_emitted!: (Symbol outcome, Hash[Symbol, untyped] opts) -> void
+      def verify_listener_contract!: () -> void
+      def verify_callback!: (Symbol outcome, Symbol callback_name) -> void
+      def verify_required_keywords!: (Symbol outcome, Symbol callback_name, Set[Symbol] declared, Array[untyped] parameters) -> void
+      def verify_receivable_keys!: (Symbol outcome, Symbol callback_name, Set[Symbol] declared, Array[untyped] parameters) -> void
+      def callback_parameters: (Symbol callback_name) -> Array[untyped]?
+      def keyword_aware?: (Array[untyped] parameters) -> bool
+      def required_keywords: (Array[untyped] parameters) -> Array[Symbol]
+      def accepted_keywords: (Array[untyped] parameters) -> Array[Symbol]
+      def keyrest?: (Array[untyped] parameters) -> bool
+      def declared_keys_for: (Symbol outcome) -> Set[Symbol]?
     end
 
     module CallbackDefaults
@@ -194,6 +227,8 @@ module Layers
     extend DSL::ClassCallable::ClassMethods
     include DSL::Instrumented
     extend DSL::Instrumented::ClassMethods
+    include DSL::Emits
+    extend DSL::Emits::ClassMethods
 
     attr_reader listener: untyped
     attr_reader on_failure: Symbol

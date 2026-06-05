@@ -168,6 +168,43 @@ guarantees the declared contract was honoured at the boundary.
 Declarations are per-class (see Recommended base classes): the concrete class's file
 always shows its complete input contract.
 
+### Declaring outputs
+
+`emits` declares the payload keys each outcome carries — the outbound mirror of the
+inputs DSL:
+
+```ruby
+class UseCases::Collaborations::Create < BaseUseCase
+  required :form
+
+  emits success: [:collaboration], failure: [:form]
+
+  def call
+    # ...
+    success(collaboration: collaboration)
+  end
+end
+```
+
+The declaration is enforced at both ends of the contract:
+
+- **At the emitter**: the `success`/`failure` payload must carry exactly the declared
+  keys — a missing key raises `Layers::DSL::MissingDeclaredOutputs`, an extra key
+  raises `Layers::DSL::UndeclaredOutputs`. One payload shape per outcome.
+- **At construction**: the wired listener's callbacks are verified against the declared
+  keys through their keyword signatures. A callback requiring a keyword the layer never
+  emits, or unable to receive a declared key, raises `Layers::ContractViolation` the
+  moment the layer is built — a mis-wired failure callback explodes in the first test
+  that constructs the layer, not in production when the failure path finally runs.
+
+Verification is skipped where nothing can be proven: no declaration, fire-and-forget
+(the null listener), `method_missing`-based listeners, and callbacks without keyword
+parameters. A `**opts` callback accepts anything and always passes. Outcomes you do
+not declare are not validated.
+
+Declarations are per-class and introspectable: `emitted_success_keys` /
+`emitted_failure_keys` return Sets for generators and tooling.
+
 ### Implementing #call
 
 `#call` holds the business logic and reports through the message protocol:
@@ -630,8 +667,11 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
 | --- | --- |
 | `Layers::Error` | Base class for all gem errors (`< StandardError`) |
 | `Layers::ConfigurationError` | A required host integration is neither detected nor configured (e.g. no GraphQL execution error class) |
+| `Layers::ContractViolation` | A wired listener callback cannot receive (or demands more than) the declared `emits` payload |
 | `Layers::DSL::MissingRequiredInputs` | A required input was not provided (`< ArgumentError`) |
 | `Layers::DSL::UnexpectedInputs` | An undeclared input was provided (`< ArgumentError`) |
+| `Layers::DSL::MissingDeclaredOutputs` | An emitted payload omitted a declared output key |
+| `Layers::DSL::UndeclaredOutputs` | An emitted payload carried a key not declared by `emits` |
 | `Layers::DSL::ClassCallable::MissingMethodError` | `.call` hit a `TypeError` caused by a missing method — usually a broken delegation |
 | `Layers::BaseQueryObject::RelationError` | A query object was built with something that is not a relation or model class |
 | `Layers::QueryBuilder::ConfigurationError` | `relation_class` did not constantize to a model |

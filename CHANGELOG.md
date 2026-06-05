@@ -43,6 +43,11 @@ distribution from a private git source.
   classes are inserted between a layer and its listener as a callback daisy
   chain; subclasses implement `instrument!(outcome)` with the subject, the
   outcome payload, and timing helpers available
+- the `emits` macro — declares the payload keys success/failure carry,
+  enforced at both ends: emitted payloads must match exactly
+  (`MissingDeclaredOutputs`/`UndeclaredOutputs`), and wired listener
+  callbacks are verified against the declaration at construction through
+  their keyword signatures (`Layers::ContractViolation`)
 - `Layers.configure` and `Layers::Logger` — configurable logging with
   Rails-aware fallbacks
 - Full RSpec suite covering every public contract
