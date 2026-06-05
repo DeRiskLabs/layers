@@ -339,6 +339,25 @@ check('GET /widgets returns the paginated collection') do
   JSON.parse(session.response.body).map { |w| w['name'] } == ['alpha', 'beta']
 end
 
+# --- generated code (bin/rails generate ran before this script) ---
+
+check('generated use case loads') { UseCases::Gadgets::Create.is_a?(Class) }
+check('generated use case spec exists') do
+  Rails.root.join('spec/lib/use_cases/gadgets/create_spec.rb').exist?
+end
+check('generated user story loads') { UserStories::Gadgets::Register.is_a?(Class) }
+check('generated query object loads') { Queries::GadgetsQuery.is_a?(Class) }
+check('generated form loads and validates') { Forms::Gadgets::CreateForm.new.valid? }
+check('generated component has a gemspec') do
+  Rails.root.join('lib/billing/billing.gemspec').exist?
+end
+check('generated component declares its root constant') do
+  Rails.root.join('lib/billing/lib/billing.rb').read.include?('module Billing')
+end
+check('component isolation runner exists and is executable') do
+  Rails.root.join('bin/test_components').executable?
+end
+
 puts
 if $failures.empty?
   puts 'SMOKE TEST PASSED'
@@ -350,6 +369,14 @@ RUBY
 
 echo "==> bundle install"
 (cd "$appdir" && bundle install --quiet)
+
+echo "==> running generators"
+(cd "$appdir" \
+  && bin/rails generate layers:use_case gadgets/create --quiet \
+  && bin/rails generate layers:user_story gadgets/register --quiet \
+  && bin/rails generate layers:query_object gadgets --quiet \
+  && bin/rails generate layers:form gadgets/create --quiet \
+  && bin/rails generate layers:component billing --quiet)
 
 echo "==> running smoke checks"
 (cd "$appdir" && bin/rails runner smoke_checks.rb)

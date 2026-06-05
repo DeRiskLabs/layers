@@ -43,6 +43,7 @@ The gem provides six building blocks:
 - [GraphQL Endpoints](#graphql-endpoints) — declarative mutations and resolvers
 - [Background Jobs](#background-jobs) — jobs as thin boundaries
 - [Registries](#registries) — boot-injected component dependencies
+- [Tooling](#tooling) — generators, the component scaffolder, boundary cops
 - [Configuration and Logging](#configuration-and-logging)
 - [Best Practices](#best-practices)
 - [Error Reference](#error-reference)
@@ -683,6 +684,56 @@ registry.to_h                    # => { identity_repository: 'Identity', ... }
 
 The container application builds registries at boot and injects them into each
 component; the component never names host constants.
+
+## Tooling
+
+### Generators
+
+Inside a Rails application, generators emit a layer object and its paired pending spec
+in house style:
+
+```bash
+$ bin/rails generate layers:use_case widgets/create      # app/lib/use_cases/widgets/create.rb
+$ bin/rails generate layers:user_story widgets/register  # app/lib/user_stories/widgets/register.rb
+$ bin/rails generate layers:query_object widgets         # app/lib/queries/widgets_query.rb
+$ bin/rails generate layers:form widgets/create          # app/lib/forms/widgets/create_form.rb
+```
+
+Each accepts `--parent` to override the default base class (`ApplicationUseCase`,
+`ApplicationUserStory`, `ApplicationQuery`).
+
+### Component scaffolder
+
+```bash
+$ bin/rails generate layers:component billing
+```
+
+generates a bounded context as an unbuilt gem under `lib/billing/`: gemspec, Gemfile,
+root constant with a registry accessor, version, isolated RSpec scaffold, and a RuboCop
+config inheriting the app's. It also creates `bin/test_components` (runs every
+component's suite in isolation) and registers an autoloader ignore for the component —
+components are consumed through the Gemfile (`path 'lib' do gem 'billing' end`), never
+autoloaded.
+
+### Boundary cops
+
+Two custom RuboCop cops enforce the direction rules mechanically:
+
+```yaml
+require:
+  - layers/rubocop
+
+Layers/UseCaseCallsUserStory:
+  Enabled: true
+Layers/UserStoryOutsideAdapter:
+  Enabled: true
+```
+
+- `Layers/UseCaseCallsUserStory` — flags `UserStories::` references inside `use_cases/`
+  files: a use case never calls a user story.
+- `Layers/UserStoryOutsideAdapter` — flags `UserStories::` references outside delivery
+  adapters (controllers, graphql, the stories themselves, specs/tests); tune with
+  `AllowedPaths`.
 
 ## Configuration and Logging
 

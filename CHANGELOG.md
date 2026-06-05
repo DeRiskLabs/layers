@@ -43,6 +43,14 @@ distribution from a private git source.
   classes are inserted between a layer and its listener as a callback daisy
   chain; subclasses implement `instrument!(outcome)` with the subject, the
   outcome payload, and timing helpers available
+- Rails generators (`layers:use_case`, `layers:user_story`,
+  `layers:query_object`, `layers:form`) emitting layer objects with paired
+  pending specs in house style, and `layers:component` scaffolding a bounded
+  context as an unbuilt gem under `lib/` (gemspec, root constant with registry
+  accessor, isolated spec scaffold, autoloader ignore) plus the
+  `bin/test_components` isolation runner
+- Boundary cops (`require: layers/rubocop`): `Layers/UseCaseCallsUserStory`
+  and `Layers/UserStoryOutsideAdapter` enforce the direction rules
 - `Layers::BaseJob` — jobs as thin boundaries: `use_case '...'` declares the
   behaviour, `perform(**args)` runs it with the job as listener, and the
   default `on_failure` raises `JobFailed` (messages extracted per the failure
