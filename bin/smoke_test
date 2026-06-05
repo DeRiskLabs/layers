@@ -3,7 +3,8 @@
 # Release smoke test: generates a throwaway API-only Rails app, installs the
 # gem from this repository as a git source (committed HEAD only), builds a
 # small layer stack per the house skills (app/lib/use_cases, user_stories,
-# queries), and exercises it directly and over HTTP.
+# queries, instrumenters, jobs), and exercises it directly and over HTTP,
+# including the emits output contracts and the instrumentation daisy chain.
 #
 # Slow (~1-2 min). Run when cutting a release.
 
@@ -33,7 +34,8 @@ GEMFILE
 echo "==> writing layer stack"
 mkdir -p "$appdir/app/lib/use_cases/widgets" \
          "$appdir/app/lib/user_stories/widgets" \
-         "$appdir/app/lib/queries"
+         "$appdir/app/lib/queries" \
+         "$appdir/app/lib/instrumenters"
 
 cat > "$appdir/app/lib/use_cases/application_use_case.rb" <<'RUBY'
 # frozen_string_literal: true
@@ -51,6 +53,8 @@ module UseCases
   module Widgets
     class Create < ApplicationUseCase
       required :name
+
+      emits success: [:widget], failure: [:errors]
 
       def call
         widget = nil
@@ -83,7 +87,11 @@ module UserStories
     class Register < ApplicationUserStory
       required :name
 
+      emits success: [:widget], failure: [:errors]
+
       observer :announce, of_event: :success
+
+      instrument Instrumenters::SmokeInstrumenter
 
       def call
         UseCases::Widgets::Create.call(
@@ -110,6 +118,39 @@ module UserStories
       end
     end
   end
+end
+RUBY
+
+cat > "$appdir/app/lib/instrumenters/smoke_instrumenter.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Instrumenters
+  class SmokeInstrumenter < Layers::Instrumenter
+    private
+
+    def instrument!(outcome)
+      $smoke_events << [:instrumented, outcome] if $smoke_events
+    end
+  end
+end
+RUBY
+
+cat > "$appdir/app/jobs/create_widget_job.rb" <<'RUBY'
+# frozen_string_literal: true
+
+class CreateWidgetJob < ApplicationJob
+  include Layers::BaseJob
+  use_case 'use_cases/widgets/create'
+end
+RUBY
+
+cat > "$appdir/app/jobs/forgetful_widget_job.rb" <<'RUBY'
+# frozen_string_literal: true
+
+class ForgetfulWidgetJob < ApplicationJob
+  include Layers::BaseJob
+  use_case 'use_cases/widgets/create'
+  fire_and_forget
 end
 RUBY
 
@@ -282,6 +323,79 @@ UserStories::Widgets::Register.call(name: 'gadget', listener: probe)
 
 check('user story success callback fires') { probe.events.first&.first == :success }
 check('user story observer fired') { $smoke_events.include?(:announced) }
+
+# --- instrumentation daisy chain ---
+
+check('instrumenter observed the success') do
+  $smoke_events.include?([:instrumented, :success])
+end
+check('instrumented callback still reaches the listener') do
+  probe.events.first.last[:widget].name == 'gadget'
+end
+
+# --- output contracts ---
+
+class OverEmitter < Layers::BaseLayer
+  emits success: [:widget]
+
+  def call
+    success(widget: :widget, extra: :extra)
+  end
+end
+
+class UnderEmitter < Layers::BaseLayer
+  emits success: [:widget]
+
+  def call
+    success
+  end
+end
+
+class MisWiredListener
+  def on_success(gadget:); end
+
+  def on_failure(**); end
+end
+
+check('undeclared output keys raise') do
+  OverEmitter.call(listener: ProbeListener.new)
+  false
+rescue Layers::DSL::UndeclaredOutputs
+  true
+end
+
+check('missing declared output keys raise') do
+  UnderEmitter.call(listener: ProbeListener.new)
+  false
+rescue Layers::DSL::MissingDeclaredOutputs
+  true
+end
+
+check('mis-wired listener fails at construction') do
+  UseCases::Widgets::Create.new(name: 'sprocket', listener: MisWiredListener.new)
+  false
+rescue Layers::ContractViolation
+  true
+end
+
+# --- jobs as thin boundaries ---
+
+check('job performs the use case to success') do
+  CreateWidgetJob.perform_now(name: 'job-widget')
+  Widget.exists?(name: 'job-widget')
+end
+
+check('failed job raises JobFailed with the failure messages') do
+  CreateWidgetJob.perform_now(name: '')
+  false
+rescue Layers::BaseJob::JobFailed => e
+  e.message.include?("Name can't be blank")
+end
+
+check('fire_and_forget job swallows the failure') do
+  ForgetfulWidgetJob.perform_now(name: '')
+  true
+end
 
 # --- query object against a real AR relation ---
 
