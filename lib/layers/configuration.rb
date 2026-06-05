@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 module Layers
-
-  # Global gem settings: logger, graphql_execution_error, error masking,
-  # pagination and relation adapters.
   class Configuration
-
     attr_accessor :logger,
                   :reveal_masked_errors
     attr_writer :exposed_error_classes,
@@ -48,7 +44,6 @@ module Layers
 
       Adapters::Pagination::WillPaginate
     end
-
   end
 
   class << self
@@ -60,7 +55,5 @@ module Layers
     def configure
       yield(configuration)
     end
-
   end
-
 end

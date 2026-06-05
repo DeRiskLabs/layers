@@ -1,19 +1,13 @@
 # frozen_string_literal: true
 
 module Layers
-
   module DSL
-
-    # The instrument macro: declared instrumenter classes are inserted between
-    # the layer and its listener as a callback daisy chain.
     module Instrumented
-
       def self.included(base)
         base.extend(ClassMethods)
       end
 
       module ClassMethods
-
         def instrument(*instrumenter_classes)
           instrumenter_classes.each do |instrumenter_class|
             unless instrumenter_class.is_a?(Class)
@@ -26,7 +20,6 @@ module Layers
         def instrumenters
           @instrumenters ||= Set.new
         end
-
       end
 
 
@@ -44,9 +37,6 @@ module Layers
           @on_success = :success
         end
       end
-
     end
-
   end
-
 end

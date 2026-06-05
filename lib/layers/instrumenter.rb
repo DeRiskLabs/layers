@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 module Layers
-
-  # Decorates the listener chain: receives the subject's success/failure,
-  # runs #instrument!, then forwards the callback to the next listener.
   class Instrumenter
-
     attr_reader :subject,
                 :listener,
                 :on_failure,
@@ -53,7 +49,5 @@ module Layers
     def logger
       @logger ||= Layers::Logger.logger
     end
-
   end
-
 end

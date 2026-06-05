@@ -3,19 +3,13 @@
 require 'active_support/core_ext/enumerable'
 
 module Layers
-
   module DSL
-
-    # Declares required and optional inputs and validates that all required inputs
-    # are provided and no unexpected inputs are passed.
     module Inputs
-
       def self.included(base)
         base.extend(ClassMethods)
       end
 
       module ClassMethods
-
         def all_inputs
           optional_inputs | required_inputs
         end
@@ -52,7 +46,6 @@ module Layers
         def default_inputs
           @default_inputs ||= {}
         end
-
       end
 
       attr_accessor :inputs
@@ -123,9 +116,6 @@ module Layers
         fail Layers::DSL::UnexpectedInputs,
              "Undeclared inputs: #{extra_inputs.join(', ')}"
       end
-
     end
-
   end
-
 end

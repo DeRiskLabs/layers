@@ -3,17 +3,13 @@
 module Layers
   module Graphql
     module BaseEndpoint
-
       class InvalidUserStory < Layers::Error; end
-
       class InvalidUserStoryArgumentMethod < Layers::Error
-
         def initialize(method_name)
           message = "A 'user_story_arg :#{method_name}' has been set, " \
             'however no method with this name has been defined.'
           super(message)
         end
-
       end
 
       WIRING_ERRORS = [InvalidUserStory, InvalidUserStoryArgumentMethod].freeze
@@ -23,7 +19,6 @@ module Layers
       end
 
       module ClassMethods
-
         def user_story(name_string)
           unless name_string.is_a?(String)
             fail ArgumentError, 'user_story argument must be a string'
@@ -42,7 +37,6 @@ module Layers
         def user_story_args
           @user_story_args ||= {}
         end
-
       end
 
 
@@ -72,7 +66,6 @@ module Layers
         on_failure(**return_args)
       end
 
-      ## Must Define Callbacks In Subclass
 
       def on_success(**args)
         fail NotImplementedError
@@ -156,7 +149,6 @@ module Layers
           raise InvalidUserStoryArgumentMethod, e.name
         end
       end
-
     end
   end
 end

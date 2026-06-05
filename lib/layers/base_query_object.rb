@@ -3,7 +3,6 @@
 module Layers
   class BaseQueryObject
     class RelationError < Layers::Error; end
-
     include Layers::QueryBuilder::RelationDefaults
     include Layers::QueryBuilder::Paginate
     include Layers::QueryBuilder::Sort
@@ -51,6 +50,5 @@ module Layers
     def build_relation_defaults!
       fail NotImplementedError
     end
-
   end
 end

@@ -3,18 +3,13 @@
 require 'logger'
 
 module Layers
-
   module DSL
-
-    # Registers and notifies observer methods when success or failure events occur.
     module Observers
-
       def self.included(base)
         base.extend ClassMethods
       end
 
       module ClassMethods
-
         attr_reader :observer_exception_handler_method
 
         def observer(*observer_methods, of_event: :success)
@@ -31,7 +26,6 @@ module Layers
         def observer_exception_handler(exception_handler_method_name)
           @observer_exception_handler_method = exception_handler_method_name
         end
-
       end
 
       def notify_observers(of_event: :success)
@@ -73,9 +67,6 @@ module Layers
           send observer
         end
       end
-
     end
-
   end
-
 end

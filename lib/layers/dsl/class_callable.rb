@@ -1,14 +1,9 @@
 # frozen_string_literal: true
 
 module Layers
-
   module DSL
-
-    # Makes a class callable directly: .call creates an instance and invokes #call.
     module ClassCallable
-
       class MissingMethodError < StandardError
-
         def initialize(original_error, klass_name)
           method_name = original_error.cause.name
           error_location = original_error.backtrace.first
@@ -19,7 +14,6 @@ module Layers
                     "Location: '#{error_location}'."
           super(message)
         end
-
       end
 
       def self.included(base)
@@ -27,7 +21,6 @@ module Layers
       end
 
       module ClassMethods
-
         def call(*args, **opts)
           new(*args, **opts).call
         rescue TypeError => e
@@ -35,15 +28,11 @@ module Layers
 
           raise e
         end
-
       end
 
       def call
         fail NotImplementedError
       end
-
     end
-
   end
-
 end

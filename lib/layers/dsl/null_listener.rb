@@ -3,10 +3,7 @@
 require 'naught'
 
 module Layers
-
   module DSL
-
-    # A do-nothing default listener (Null Object) used when no listener is provided.
     module NullListener
 
 
@@ -19,9 +16,6 @@ module Layers
       def null_listener_factory
         @null_listener_factory ||= Naught.build(&:black_hole)
       end
-
     end
-
   end
-
 end

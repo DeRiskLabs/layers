@@ -3,9 +3,7 @@
 module Layers
   module QueryBuilder
     class PaginationError < Layers::Error; end
-
     module Paginate
-
       def page(page)
         @paginated = true
         @relation = pagination_adapter.page(relation, page)
@@ -32,7 +30,6 @@ module Layers
       def pagination_adapter
         Layers.configuration.pagination_adapter
       end
-
     end
   end
 end

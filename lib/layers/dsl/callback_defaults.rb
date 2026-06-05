@@ -1,13 +1,8 @@
 # frozen_string_literal: true
 
 module Layers
-
   module DSL
-
-    # Default callback method names for success and failure events, used when no
-    # specific callbacks are provided during initialization.
     module CallbackDefaults
-
       ON_FAILURE_DEFAULT_CALLBACK = :on_failure
       ON_SUCCESS_DEFAULT_CALLBACK = :on_success
 
@@ -17,7 +12,6 @@ module Layers
       end
 
       module ClassMethods
-
         def default_callbacks(**args)
           @on_failure_default = args[:on_failure]
           @on_success_default = args[:on_success]
@@ -30,11 +24,9 @@ module Layers
         def on_success_default
           @on_success_default || ON_SUCCESS_DEFAULT_CALLBACK
         end
-
       end
 
       module InstanceMethods
-
         attr_reader :on_failure_default, :on_success_default
 
         def initialize(*args, **opts)
@@ -43,11 +35,7 @@ module Layers
 
           super
         end
-
       end
-
     end
-
   end
-
 end
