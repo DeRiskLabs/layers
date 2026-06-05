@@ -735,6 +735,40 @@ Layers/UserStoryOutsideAdapter:
   adapters (controllers, graphql, the stories themselves, specs/tests); tune with
   `AllowedPaths`.
 
+### AI agent skills
+
+The derisk skill collections teach AI coding agents the conventions this gem assumes.
+They ship as data-only gems (`ai-derisk_common`, `ai-derisk_ruby`, `ai-derisk_rails`,
+`ai-derisk_layers`); each depends on the more general collections it references, so one
+Gemfile line pulls the full set:
+
+```ruby
+group :development do
+  gem 'ai-derisk_layers', require: false
+end
+```
+
+Then copy the collections into your project (each lands in its own subdirectory):
+
+```bash
+$ bin/rails layers:sync_skills              # prompts for a destination (default .ai/skills)
+$ bin/rails 'layers:sync_skills[.ai/skills]'
+```
+
+`sync_skills` replaces each collection directory on every run, so the copies track the
+bundled gem versions; re-run it after `bundle update`.
+
+Teams that maintain or contribute to the skills can clone the live repositories instead
+of copying static snapshots — clones pull updates and push fixes back:
+
+```bash
+$ bin/rails 'layers:clone_skills[common_agent_skills]'
+```
+
+`clone_skills` clones each `AI-derisk_*` repository (or fast-forward pulls an existing
+clone). Outside Rails, add `load 'layers/tasks/skills.rake'` to your `Rakefile` to get
+both tasks.
+
 ## Configuration and Logging
 
 `Layers.configure` is the single place the gem learns about its host:

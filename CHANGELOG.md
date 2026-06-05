@@ -59,6 +59,14 @@ distribution from a private git source.
   boundaries: lazy constantize with memoization, pass-through for non-string
   entries, and a per-class `suffix` macro for `registry[:identity]`
   convenience
+- `Layers::SkillsInstaller` and the `layers:sync_skills` task — copies every
+  bundled `ai-derisk_*` skill collection gem into a chosen directory, one
+  subdirectory per collection, replacing each on every run so the copies
+  track the bundled versions
+- `Layers::SkillsCloner` and the `layers:clone_skills` task — clones (or
+  fast-forward pulls) the live `AI-derisk_*` skill repositories for teams
+  that contribute skills back
+- `Layers::Railtie` — loads the gem's rake tasks inside Rails applications
 - the `emits` macro — declares the payload keys success/failure carry,
   enforced at both ends: emitted payloads must match exactly
   (`MissingDeclaredOutputs`/`UndeclaredOutputs`), and wired listener
