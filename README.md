@@ -738,8 +738,8 @@ Layers/UserStoryOutsideAdapter:
 ### AI agent skills
 
 The derisk skill collections teach AI coding agents the conventions this gem assumes.
-They ship as data-only gems (`ai-derisk_common`, `ai-derisk_ruby`, `ai-derisk_rails`,
-`ai-derisk_layers`); each depends on the more general collections it references, so one
+They ship as data-only gems; each depends on the more general collections its skills
+actually reference (`ai-derisk_layers` → `ai-derisk_rails` → `ai-derisk_ruby`), so one
 Gemfile line pulls the full set:
 
 ```ruby
@@ -747,6 +747,9 @@ group :development do
   gem 'ai-derisk_layers', require: false
 end
 ```
+
+`ai-derisk_common` (agent workflow behaviour such as commit policy) is deliberately
+standalone — no collection depends on it; add it explicitly if you want it.
 
 Then copy the collections into your project (each lands in its own subdirectory):
 
