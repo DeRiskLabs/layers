@@ -54,7 +54,8 @@ distribution from a private git source.
 - `Layers::BaseJob` — jobs as thin boundaries: `use_case '...'` declares the
   behaviour, `perform(**args)` runs it with the job as listener, and the
   default `on_failure` raises `JobFailed` (messages extracted per the failure
-  contract) so queue retry semantics engage
+  contract) so queue retry semantics engage; `fire_and_forget` runs the use
+  case with no listener so the job never raises or retries
 - `Layers::Registry` — boot-injected name→class registries for component
   boundaries: lazy constantize with memoization, pass-through for non-string
   entries, and a per-class `suffix` macro for `registry[:identity]`

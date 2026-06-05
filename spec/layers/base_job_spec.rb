@@ -29,6 +29,40 @@ RSpec.describe Layers::BaseJob do
     end
   end
 
+  describe '.fire_and_forget?' do
+    context 'when fire_and_forget is declared' do
+      subject(:job_class) do
+        Class.new do
+          include Layers::BaseJob
+          fire_and_forget
+        end
+      end
+
+      it { is_expected.to be_fire_and_forget }
+    end
+
+    context 'when fire_and_forget is not declared' do
+      subject(:job_class) { Class.new.include(described_class) }
+
+      it { is_expected.not_to be_fire_and_forget }
+    end
+
+    context 'with a subclass of a declaring class' do
+      subject(:job_subclass) { Class.new(job_class) }
+
+      let(:job_class) do
+        Class.new do
+          include Layers::BaseJob
+          fire_and_forget
+        end
+      end
+
+      it 'does not inherit the declaration' do
+        expect(job_subclass).not_to be_fire_and_forget
+      end
+    end
+  end
+
   describe '#perform' do
     subject(:job) { job_class.new }
 
@@ -53,6 +87,25 @@ RSpec.describe Layers::BaseJob do
       it 'calls the use case as listener with its callbacks' do
         expect(use_case_class).to have_received(:call)
           .with(listener: job, on_success: :success, on_failure: :failure, widget_id: 1)
+      end
+    end
+
+    context 'when fire_and_forget is declared' do
+      let(:job_class) do
+        Class.new do
+          include Layers::BaseJob
+          use_case 'create_widget'
+          fire_and_forget
+        end
+      end
+
+      execute do
+        job.perform(widget_id: 1)
+      end
+
+      it 'calls the use case without a listener' do
+        expect(use_case_class).to have_received(:call)
+          .with(listener: nil, on_success: :success, on_failure: :failure, widget_id: 1)
       end
     end
 

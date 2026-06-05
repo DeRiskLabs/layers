@@ -19,15 +19,18 @@ module Layers
       def use_case_class_name
         @use_case_class_name
       end
+
+      def fire_and_forget
+        @fire_and_forget = true
+      end
+
+      def fire_and_forget?
+        @fire_and_forget == true
+      end
     end
 
     def perform(**perform_args)
-      use_case.call(
-        listener: self,
-        on_success: :success,
-        on_failure: :failure,
-        **perform_args,
-      )
+      call_use_case(**perform_args)
     end
 
     def success(**return_args)
@@ -46,6 +49,19 @@ module Layers
 
 
     private
+
+    def call_use_case(**args)
+      use_case.call(
+        listener: job_listener,
+        on_success: :success,
+        on_failure: :failure,
+        **args,
+      )
+    end
+
+    def job_listener
+      self.class.fire_and_forget? ? nil : self
+    end
 
     def use_case
       class_name = self.class.use_case_class_name || fail(InvalidUseCase)

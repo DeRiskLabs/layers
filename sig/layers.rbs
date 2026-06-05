@@ -334,6 +334,8 @@ module Layers
     module ClassMethods
       def use_case: (String name_string) -> String
       def use_case_class_name: () -> String?
+      def fire_and_forget: () -> bool
+      def fire_and_forget?: () -> bool
     end
 
     def perform: (**untyped perform_args) -> untyped
@@ -344,6 +346,8 @@ module Layers
 
     private
 
+    def call_use_case: (**untyped args) -> untyped
+    def job_listener: () -> untyped
     def use_case: () -> untyped
     def failed_message: (Hash[Symbol, untyped] args) -> String
     def failure_messages: (Hash[Symbol, untyped] args) -> Array[String]

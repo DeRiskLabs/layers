@@ -650,6 +650,20 @@ end
   errors collections), so the queue's retry machinery engages. Target it with
   `retry_on`/`discard_on`, or override `on_failure` for custom semantics.
 
+Declaring `fire_and_forget` runs the use case with no listener (outcomes go to the
+null listener): the job neither raises nor retries, whatever the outcome.
+
+```ruby
+class PruneStaleSessionsJob < ApplicationJob
+  use_case 'use_cases/sessions/prune_stale'
+  fire_and_forget
+end
+```
+
+Like every layers declaration, `use_case` and `fire_and_forget` are per-class —
+nothing inherits. Jobs that deserialize override `perform` and call `super` with the
+real arguments; `call_use_case(**args)` is the private seam `perform` delegates to.
+
 A missing or non-constantizable `use_case` raises `InvalidUseCase`. The mixin has no
 ActiveJob dependency — any object with this `perform` convention works.
 
