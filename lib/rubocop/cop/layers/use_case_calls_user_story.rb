@@ -11,6 +11,7 @@ module RuboCop
 
         def on_const(node)
           return unless user_stories_root?(node)
+          return if definition_name?(node)
           return unless use_case_file?
 
           add_offense(node)

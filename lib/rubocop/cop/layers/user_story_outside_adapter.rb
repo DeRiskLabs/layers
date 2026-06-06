@@ -18,6 +18,7 @@ module RuboCop
 
         def on_const(node)
           return unless user_stories_root?(node)
+          return if definition_name?(node)
           return if allowed_file?
 
           add_offense(node)

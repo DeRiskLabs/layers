@@ -40,6 +40,13 @@ RSpec.describe RuboCop::Cop::Layers::UseCaseCallsUserStory do
     end
   end
 
+  context 'with a module definition of the UserStories namespace in a use case file' do
+    it 'allows the definition' do
+      found = offenses("module UserStories\nend", '/app/lib/use_cases/user_stories.rb')
+      expect(found).to be_empty
+    end
+  end
+
   context 'with an offense' do
     it 'explains the direction rule' do
       found = offenses('UserStories::Register.call', '/app/lib/use_cases/create.rb')

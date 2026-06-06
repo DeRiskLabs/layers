@@ -56,6 +56,27 @@ RSpec.describe RuboCop::Cop::Layers::UserStoryOutsideAdapter do
     end
   end
 
+  context 'with a module definition of the UserStories namespace' do
+    it 'allows the definition' do
+      found = offenses("module UserStories\nend", '/apis/v1/lib/v1/user_stories.rb')
+      expect(found).to be_empty
+    end
+  end
+
+  context 'with a compact module definition under UserStories' do
+    it 'allows the definition' do
+      found = offenses("module UserStories::Widgets\nend", '/lib/v1/user_stories.rb')
+      expect(found).to be_empty
+    end
+  end
+
+  context 'with a class inheriting from a user story outside adapters' do
+    it 'flags the superclass reference' do
+      found = offenses("class Digest < UserStories::Widgets::Base\nend", '/app/jobs/digest.rb')
+      expect(found.size).to eq(1)
+    end
+  end
+
   context 'with custom allowed paths' do
     let(:config) do
       RuboCop::Config.new(
