@@ -481,6 +481,32 @@ end
 check('component isolation runner exists and is executable') do
   Rails.root.join('bin/test_components').executable?
 end
+check('generated graphql mutation declares its user story') do
+  Rails.root.join('apis/graph/app/graphql/graph/mutations/articles/create_article.rb')
+       .read.include?("user_story 'user_stories/graph/articles/create_article'")
+end
+check('generated graphql mutation user story exists') do
+  Rails.root.join('apis/graph/app/lib/user_stories/graph/articles/create_article.rb').exist?
+end
+check('generated graphql mutation is registered') do
+  Rails.root.join('apis/graph/app/graphql/graph/types/mutation_type.rb')
+       .read.include?('field :create_article, mutation: Graph::Mutations::Articles::CreateArticle')
+end
+check('generated graphql resolvers exist') do
+  ['articles', 'article'].all? do |name|
+    Rails.root.join("apis/graph/app/graphql/graph/resolvers/articles/#{name}.rb").exist?
+  end
+end
+check('generated graphql resolvers are registered') do
+  content = Rails.root.join('apis/graph/app/graphql/graph/types/query_type.rb').read
+  content.include?('field :articles, resolver: Graph::Resolvers::Articles::Articles') &&
+    content.include?('field :article, resolver: Graph::Resolvers::Articles::Article')
+end
+check('generated graphql acceptance specs exist') do
+  ['create_article', 'articles', 'article'].all? do |name|
+    Rails.root.join("spec/acceptance/graph/articles/#{name}_spec.rb").exist?
+  end
+end
 
 puts
 if $failures.empty?
@@ -494,13 +520,40 @@ RUBY
 echo "==> bundle install"
 (cd "$appdir" && bundle install --quiet)
 
+echo "==> stubbing graphql type roots"
+mkdir -p "$appdir/apis/graph/app/graphql/graph/types"
+cat > "$appdir/apis/graph/app/graphql/graph/types/mutation_type.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Graph
+  module Types
+    class MutationType < Graph::Types::Base::Object
+    end
+  end
+end
+RUBY
+
+cat > "$appdir/apis/graph/app/graphql/graph/types/query_type.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Graph
+  module Types
+    class QueryType < Graph::Types::Base::Object
+    end
+  end
+end
+RUBY
+
 echo "==> running generators"
 (cd "$appdir" \
   && bin/rails generate layers:use_case gadgets/create --quiet \
   && bin/rails generate layers:user_story gadgets/register --quiet \
   && bin/rails generate layers:query_object gadgets --quiet \
   && bin/rails generate layers:form gadgets/create --quiet \
-  && bin/rails generate layers:component billing --quiet)
+  && bin/rails generate layers:component billing --quiet \
+  && bin/rails generate layers:graphql_mutation articles/create_article --quiet \
+  && bin/rails generate layers:graphql_query articles --quiet \
+  && bin/rails generate layers:graphql_query articles --single --quiet)
 
 echo "==> running smoke checks"
 (cd "$appdir" && bin/rails runner smoke_checks.rb)

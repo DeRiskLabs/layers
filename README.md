@@ -739,6 +739,21 @@ $ bin/rails generate layers:form widgets/create          # app/lib/forms/widgets
 Each accepts `--parent` to override the default base class (`ApplicationUseCase`,
 `ApplicationUserStory`, `ApplicationQuery`).
 
+The GraphQL pair generates declarative endpoints into the API engine — the endpoint,
+its engine-local user story (`required :current_identity` mirroring `user_story_arg`),
+a pending acceptance spec, and the `MutationType`/`QueryType` registration (injected
+when the type file exists, printed otherwise):
+
+```bash
+$ bin/rails generate layers:graphql_mutation articles/create_article
+$ bin/rails generate layers:graphql_query articles            # list resolver, fetch_all story
+$ bin/rails generate layers:graphql_query articles --single   # one-record resolver, fetch story
+```
+
+Both accept `--engine` (default `graph`: files under `apis/graph/`, constants under
+`Graph::`) and `--parent` (defaults `Graph::Mutations::ApplicationMutation` /
+`Graph::Resolvers::ApplicationResolver`).
+
 ### Component scaffolder
 
 ```bash

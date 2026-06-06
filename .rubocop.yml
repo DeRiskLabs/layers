@@ -105,6 +105,12 @@ Metrics/MethodLength:
 Metrics/ModuleLength:
   CountAsOne:
     - heredoc
+    - array
+
+Metrics/ClassLength:
+  CountAsOne:
+    - heredoc
+    - array
 
 # Spec idioms follow the house testing style, not RSpec cop defaults
 

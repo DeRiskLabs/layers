@@ -50,6 +50,9 @@ distribution from a private git source.
   `configure`/`configuration`, repository registry, isolated spec scaffold,
   autoloader ignore) plus the
   `bin/test_components` isolation runner
+- GraphQL generators (`layers:graphql_mutation`, `layers:graphql_query` with
+  `--single`) emitting the declarative endpoint, its engine-local user story,
+  a pending acceptance spec, and the `MutationType`/`QueryType` registration
 - Boundary cops (`require: layers/rubocop`): `Layers/UseCaseCallsUserStory`
   and `Layers/UserStoryOutsideAdapter` enforce the direction rules
 - `Layers::BaseJob` — jobs as thin boundaries: `use_case '...'` declares the

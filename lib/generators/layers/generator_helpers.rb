@@ -8,7 +8,10 @@ module Layers
       private
 
       def namespaced(root, declaration, body)
-        modules = [root, *class_path.map(&:camelize)]
+        namespaced_in([*root.split('::'), *class_path.map(&:camelize)], declaration, body)
+      end
+
+      def namespaced_in(modules, declaration, body)
         lines = ['# frozen_string_literal: true', '']
         lines.concat(opening_lines(modules))
         lines.concat(declaration_lines(declaration, body, modules.size))
