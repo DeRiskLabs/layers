@@ -11,6 +11,7 @@
 set -euo pipefail
 
 gem_root="$(cd "$(dirname "$0")/.." && pwd)"
+gem_branch="$(git -C "$gem_root" rev-parse --abbrev-ref HEAD)"
 workdir="$(mktemp -d)"
 appdir="$workdir/smoke_app"
 trap 'rm -rf "$workdir"' EXIT
@@ -28,7 +29,7 @@ echo "==> wiring Gemfile to the git-sourced gem"
 cat >> "$appdir/Gemfile" <<GEMFILE
 
 gem 'kaminari'
-gem 'layers', git: '${gem_root}'
+gem 'layers', git: '${gem_root}', branch: '${gem_branch}'
 GEMFILE
 
 echo "==> writing layer stack"
