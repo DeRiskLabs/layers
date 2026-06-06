@@ -468,6 +468,16 @@ end
 check('generated component declares its root constant') do
   Rails.root.join('lib/billing/lib/billing.rb').read.include?('module Billing')
 end
+check('generated component configures and resolves repositories') do
+  $LOAD_PATH.unshift(Rails.root.join('lib/billing/lib').to_s)
+  require 'billing'
+  Billing.configure { |config| config.register_repository widget: 'Widget' }
+  Billing.configuration.repo[:widget].equal?(Widget)
+end
+check('generated component registry forgets removed repositories') do
+  Billing.configuration.repo.remove_repository(:widget)
+  !Billing.configuration.repo.registered?(:widget)
+end
 check('component isolation runner exists and is executable') do
   Rails.root.join('bin/test_components').executable?
 end

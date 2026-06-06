@@ -26,6 +26,14 @@ module Layers
         create_file component_path('lib', file_name, 'version.rb'), version
       end
 
+      def create_repository_registry
+        create_file component_path('lib', file_name, 'repository_registry.rb'), repository_registry
+      end
+
+      def create_configuration
+        create_file component_path('lib', file_name, 'configuration.rb'), configuration
+      end
+
       def create_spec_helper
         create_file component_path('spec', 'spec_helper.rb'), spec_helper
       end

@@ -46,10 +46,50 @@ module Layers
 
           require 'layers'
           require '#{file_name}/version'
+          require '#{file_name}/repository_registry'
+          require '#{file_name}/configuration'
 
           module #{module_name}
             class << self
-              attr_accessor :repository_registry
+              def configuration
+                @configuration ||= Configuration.new
+              end
+
+              def configure
+                yield(configuration)
+              end
+            end
+          end
+        RUBY
+      end
+
+      def configuration
+        <<~RUBY
+          # frozen_string_literal: true
+
+          module #{module_name}
+            class Configuration
+              attr_writer :repo
+
+              delegate :register_repository, :register_repositories, to: :repo
+
+              def repo
+                @repo ||= RepositoryRegistry.new
+              end
+            end
+          end
+        RUBY
+      end
+
+      def repository_registry
+        <<~RUBY
+          # frozen_string_literal: true
+
+          module #{module_name}
+            class RepositoryRegistry < Layers::BaseRegistry
+              alias register_repository register
+              alias register_repositories register
+              alias remove_repository remove
             end
           end
         RUBY
@@ -108,7 +148,15 @@ module Layers
           - Public interface: class methods on `#{module_name}` in `lib/#{file_name}.rb` —
             other contexts and the container call only these.
           - Persistence: the container owns all models; this component reaches them through
-            the registry injected at boot (`#{module_name}.repository_registry`).
+            repositories registered at boot:
+
+            ```ruby
+            #{module_name}.configure do |config|
+              config.register_repository identity: 'Identity'
+            end
+            ```
+
+            Component code resolves them via `#{module_name}.configuration.repo[:identity]`.
           - Consumed via the application Gemfile, never autoloaded:
             `path 'lib' do gem '#{file_name}' end`.
           - Isolated suite: `bin/test_components` from the application root, or

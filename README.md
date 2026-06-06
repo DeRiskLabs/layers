@@ -30,7 +30,7 @@ The gem provides six building blocks:
 | `Layers::BaseQueryObject` | Base class for scoped, chainable read objects |
 | `Layers::Graphql::BaseEndpoint` | Declarative GraphQL mutation/resolver integration |
 | `Layers::BaseJob` | Jobs as thin boundaries: deserialize, call a use case, map outcome to queue semantics |
-| `Layers::Registry` | Boot-injected name→class registries for component boundaries |
+| `Layers::BaseRegistry` | Boot-registered name→class registries for component boundaries |
 | `Layers::Instrumenter` | Listener-chain instrumentation via the `instrument` macro |
 
 ## Contents
@@ -670,34 +670,57 @@ ActiveJob dependency — any object with this `perform` convention works.
 ## Registries
 
 Components (unbuilt gems in `lib/`) reach host-owned classes through a registry
-injected at boot, instead of naming constants directly. `Layers::Registry` maps names
-to constantizable strings, resolved lazily and memoized:
+filled at boot, instead of naming constants directly. Each component declares its
+registry by subclassing `Layers::BaseRegistry`; the container registers entries
+through the component's configuration:
 
 ```ruby
-class RepositoryRegistry < Layers::Registry
-  suffix :repository
+module Accounts
+  class RepositoryRegistry < Layers::BaseRegistry
+    alias register_repository register
+    alias register_repositories register
+    alias remove_repository remove
+  end
 end
-
-registry = RepositoryRegistry.new(
-  identity_repository: 'Identity',
-  collab_repository: 'Collab::Record',
-)
-
-registry[:identity_repository]   # => Identity
-registry[:identity]              # => Identity (suffix-aware convenience)
-registry.to_h                    # => { identity_repository: 'Identity', ... }
 ```
 
-- Entries are constantized lazily on first access — the registry can be built before
-  the host's classes load — and resolved entries are memoized.
-- Non-string entries pass through untouched, so tests register doubles or classes
-  directly. An entry only has to duck-type to what the component asks of it.
-- An unknown name raises `Layers::Registry::NotRegistered`; a string that does not
-  constantize raises `Layers::Registry::InvalidEntry`.
-- `suffix` is per-class, like every declaration.
+```ruby
+# config/initializers/components.rb
+Accounts.configure do |config|
+  config.register_repository identity: 'Identity'
+  config.register_repositories profile: 'Profile', user_account: 'UserAccount'
+end
+```
 
-The container application builds registries at boot and injects them into each
-component; the component never names host constants.
+`register` takes one pair or many — `register_repository`/`register_repositories`
+are the same method wearing domain names. Component code resolves through the
+configuration, never naming host constants:
+
+```ruby
+Accounts.configuration.repo[:identity]   # => Identity
+```
+
+- Entries are stored as strings: keys are symbolized, values coerced with `to_s` at
+  registration, so registering a class stores its *name*. Resolution constantizes on
+  every access — nothing is memoized, so reloaded host classes are always current and
+  boot order never matters.
+- A `defaults` hook (private, returns `{}`) lets a registry subclass ship its own
+  seed entries; registration overrides them.
+- Introspection: `registered` (symbol names), `registered?(name)`, `to_h` (a copy);
+  `remove(name)` forgets an entry entirely.
+- An unknown name raises `Layers::BaseRegistry::NotRegistered`; an entry that does
+  not constantize raises `Layers::BaseRegistry::InvalidEntry`.
+
+In component specs, swap the whole registry rather than registering doubles — the
+component only ever sends `[]`, so anything that answers it serves:
+
+```ruby
+Accounts.configuration.repo = { identity: fake_identities }
+```
+
+The component scaffolder (below) generates the `RepositoryRegistry`, the
+`Configuration` carrying `repo` and the registration delegators, and the root
+constant's `configure`/`configuration` pair.
 
 ## Tooling
 
@@ -723,8 +746,10 @@ $ bin/rails generate layers:component billing
 ```
 
 generates a bounded context as an unbuilt gem under `lib/billing/`: gemspec, Gemfile,
-root constant with a registry accessor, version, isolated RSpec scaffold, and a RuboCop
-config inheriting the app's. It also creates `bin/test_components` (runs every
+root constant with `configure`/`configuration`, a `RepositoryRegistry` subclassing
+`Layers::BaseRegistry`, the `Configuration` carrying `repo` and the registration
+delegators, version, isolated RSpec scaffold, and a RuboCop config inheriting the
+app's. It also creates `bin/test_components` (runs every
 component's suite in isolation) and registers an autoloader ignore for the component —
 components are consumed through the Gemfile (`path 'lib' do gem 'billing' end`), never
 autoloaded.
@@ -853,8 +878,8 @@ The gem logs through `Layers::Logger.logger`, which resolves in order:
 | `Layers::Graphql::BaseEndpoint::InvalidUserStoryArgumentMethod` | A `user_story_arg` has no backing method |
 | `Layers::BaseJob::InvalidUseCase` | No `use_case` declared, or it did not constantize |
 | `Layers::BaseJob::JobFailed` | The default `on_failure` — raised so the queue's retry machinery engages |
-| `Layers::Registry::NotRegistered` | A registry lookup for an unknown name |
-| `Layers::Registry::InvalidEntry` | A registry entry string that did not constantize |
+| `Layers::BaseRegistry::NotRegistered` | A registry lookup for an unknown name |
+| `Layers::BaseRegistry::InvalidEntry` | A registry entry that did not constantize |
 
 ## Development
 

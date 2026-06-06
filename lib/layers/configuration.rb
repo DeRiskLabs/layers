@@ -1,14 +1,27 @@
 # frozen_string_literal: true
 
 module Layers
+  class << self
+
+    def configuration
+      @configuration ||= Configuration.new
+    end
+
+    def configure
+      yield(configuration)
+    end
+  end
+
   class Configuration
     attr_accessor :logger,
                   :reveal_masked_errors
+
     attr_writer :exposed_error_classes,
                 :graphql_execution_error,
                 :masked_error_message,
                 :pagination_adapter,
                 :relation_adapter
+
 
     def exposed_error_classes
       @exposed_error_classes ||= []
@@ -43,17 +56,6 @@ module Layers
       return Adapters::Pagination::Kaminari if defined?(::Kaminari)
 
       Adapters::Pagination::WillPaginate
-    end
-  end
-
-  class << self
-
-    def configuration
-      @configuration ||= Configuration.new
-    end
-
-    def configure
-      yield(configuration)
     end
   end
 end

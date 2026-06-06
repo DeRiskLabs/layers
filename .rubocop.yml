@@ -102,6 +102,10 @@ Metrics/MethodLength:
     - heredoc
     - method_call
 
+Metrics/ModuleLength:
+  CountAsOne:
+    - heredoc
+
 # Spec idioms follow the house testing style, not RSpec cop defaults
 
 RSpec/DescribedClass:

@@ -354,30 +354,26 @@ module Layers
     def extracted_errors: (untyped value) -> Array[String]
   end
 
-  class Registry
+  class BaseRegistry
     class NotRegistered < Layers::Error
     end
 
     class InvalidEntry < Layers::Error
     end
 
-    def self.suffix: (Symbol name) -> Symbol
-    def self.suffix_name: () -> Symbol?
-
-    def initialize: (?Hash[Symbol | String, untyped] entries) -> void
+    def initialize: (**untyped entries) -> void
 
     def []: (Symbol | String name) -> untyped
+    def register: (**untyped entries) -> untyped
+    def remove: (Symbol | String name) -> String?
+    def registered: () -> Array[Symbol]
     def registered?: (Symbol | String name) -> bool
-    def to_h: () -> Hash[Symbol, untyped]
-    def names: () -> Array[Symbol]
+    def to_h: () -> Hash[Symbol, String]
 
     private
 
-    attr_reader entries: Hash[Symbol, untyped]
-
-    def registered_name: (Symbol | String name) -> Symbol?
-    def candidates: (Symbol | String name) -> Array[Symbol]
-    def suffixed_name: (Symbol | String name) -> Symbol?
+    def store: () -> Hash[Symbol, String]
+    def defaults: () -> Hash[untyped, untyped]
     def resolve: (Symbol key) -> untyped
   end
 

@@ -2,6 +2,7 @@
 
 require 'naught'
 require 'active_support'
+require 'active_support/core_ext/module/delegation'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/string/inflections'
 
@@ -12,7 +13,7 @@ require 'layers/adapters'
 require 'layers/configuration'
 require 'layers/logger'
 require 'layers/instrumenter'
-require 'layers/registry'
+require 'layers/base_registry'
 
 require 'layers/dsl'
 require 'layers/base_layer'

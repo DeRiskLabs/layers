@@ -46,8 +46,9 @@ distribution from a private git source.
 - Rails generators (`layers:use_case`, `layers:user_story`,
   `layers:query_object`, `layers:form`) emitting layer objects with paired
   pending specs in house style, and `layers:component` scaffolding a bounded
-  context as an unbuilt gem under `lib/` (gemspec, root constant with registry
-  accessor, isolated spec scaffold, autoloader ignore) plus the
+  context as an unbuilt gem under `lib/` (gemspec, root constant with
+  `configure`/`configuration`, repository registry, isolated spec scaffold,
+  autoloader ignore) plus the
   `bin/test_components` isolation runner
 - Boundary cops (`require: layers/rubocop`): `Layers/UseCaseCallsUserStory`
   and `Layers/UserStoryOutsideAdapter` enforce the direction rules
@@ -56,10 +57,12 @@ distribution from a private git source.
   default `on_failure` raises `JobFailed` (messages extracted per the failure
   contract) so queue retry semantics engage; `fire_and_forget` runs the use
   case with no listener so the job never raises or retries
-- `Layers::Registry` — boot-injected name→class registries for component
-  boundaries: lazy constantize with memoization, pass-through for non-string
-  entries, and a per-class `suffix` macro for `registry[:identity]`
-  convenience
+- `Layers::BaseRegistry` — boot-registered name→class registries for
+  component boundaries: kwargs `register` (one pair or many), strings-only
+  storage coerced at registration, constantize on every access (reload-proof,
+  nothing memoized), a `defaults` hook for subclass seed entries, and
+  `registered`/`registered?`/`remove`/`to_h` introspection; components pair
+  it with a `Configuration` exposing `repo` and registration delegators
 - `Layers::SkillsInstaller` and the `layers:sync_skills` task — copies every
   bundled `ai-derisk_*` skill collection gem into a chosen directory, one
   subdirectory per collection, replacing each on every run so the copies
