@@ -463,13 +463,13 @@ check('generated user story loads') { UserStories::Gadgets::Register.is_a?(Class
 check('generated query object loads') { Queries::GadgetsQuery.is_a?(Class) }
 check('generated form loads and validates') { Forms::Gadgets::CreateForm.new.valid? }
 check('generated component has a gemspec') do
-  Rails.root.join('lib/billing/billing.gemspec').exist?
+  Rails.root.join('components/billing/billing.gemspec').exist?
 end
 check('generated component declares its root constant') do
-  Rails.root.join('lib/billing/lib/billing.rb').read.include?('module Billing')
+  Rails.root.join('components/billing/lib/billing.rb').read.include?('module Billing')
 end
 check('generated component configures and resolves repositories') do
-  $LOAD_PATH.unshift(Rails.root.join('lib/billing/lib').to_s)
+  $LOAD_PATH.unshift(Rails.root.join('components/billing/lib').to_s)
   require 'billing'
   Billing.configure { |config| config.register_repository widget: 'Widget' }
   Billing.configuration.repo[:widget].equal?(Widget)

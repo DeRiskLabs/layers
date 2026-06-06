@@ -669,7 +669,7 @@ ActiveJob dependency — any object with this `perform` convention works.
 
 ## Registries
 
-Components (unbuilt gems in `lib/`) reach host-owned classes through a registry
+Components (unbuilt gems in `components/`) reach host-owned classes through a registry
 filled at boot, instead of naming constants directly. Each component declares its
 registry by subclassing `Layers::BaseRegistry`; the container registers entries
 through the component's configuration:
@@ -760,13 +760,13 @@ Both accept `--engine` (default `graph`: files under `apis/graph/`, constants un
 $ bin/rails generate layers:component billing
 ```
 
-generates a bounded context as an unbuilt gem under `lib/billing/`: gemspec, Gemfile,
-root constant with `configure`/`configuration`, a `RepositoryRegistry` subclassing
-`Layers::BaseRegistry`, the `Configuration` carrying `repo` and the registration
-delegators, version, isolated RSpec scaffold, and a RuboCop config inheriting the
-app's. It also creates `bin/test_components` (runs every
-component's suite in isolation) and registers an autoloader ignore for the component —
-components are consumed through the Gemfile (`path 'lib' do gem 'billing' end`), never
+generates a bounded context as an unbuilt gem under `components/billing/`: gemspec,
+Gemfile, root constant with `configure`/`configuration`, a `RepositoryRegistry`
+subclassing `Layers::BaseRegistry`, the `Configuration` carrying `repo` and the
+registration delegators, version, isolated RSpec scaffold, and a RuboCop config
+inheriting the app's. It also creates `bin/test_components` (runs every component's
+suite in isolation). `components/` sits outside the autoload paths — components are
+consumed through the Gemfile (`path 'components' do gem 'billing' end`), never
 autoloaded.
 
 ### Boundary cops

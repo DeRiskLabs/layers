@@ -158,7 +158,7 @@ module Layers
 
             Component code resolves them via `#{module_name}.configuration.repo[:identity]`.
           - Consumed via the application Gemfile, never autoloaded:
-            `path 'lib' do gem '#{file_name}' end`.
+            `path 'components' do gem '#{file_name}' end`.
           - Isolated suite: `bin/test_components` from the application root, or
             `bundle exec rspec` from this directory. Wire your private `layers` source into
             the Gemfile first.
@@ -171,7 +171,7 @@ module Layers
           set -uo pipefail
 
           status=0
-          for component in lib/*/; do
+          for component in components/*/; do
             [ -f "${component}Gemfile" ] || continue
             echo "==> ${component}"
             (cd "$component" && BUNDLE_GEMFILE=Gemfile bundle exec rspec) || status=1

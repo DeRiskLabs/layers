@@ -46,10 +46,9 @@ distribution from a private git source.
 - Rails generators (`layers:use_case`, `layers:user_story`,
   `layers:query_object`, `layers:form`) emitting layer objects with paired
   pending specs in house style, and `layers:component` scaffolding a bounded
-  context as an unbuilt gem under `lib/` (gemspec, root constant with
-  `configure`/`configuration`, repository registry, isolated spec scaffold,
-  autoloader ignore) plus the
-  `bin/test_components` isolation runner
+  context as an unbuilt gem under `components/` (gemspec, root constant with
+  `configure`/`configuration`, repository registry, isolated spec scaffold)
+  plus the `bin/test_components` isolation runner
 - GraphQL generators (`layers:graphql_mutation`, `layers:graphql_query` with
   `--single`) emitting the declarative endpoint, its engine-local user story,
   a pending acceptance spec, and the `MutationType`/`QueryType` registration

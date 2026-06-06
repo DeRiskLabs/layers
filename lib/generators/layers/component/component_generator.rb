@@ -8,8 +8,6 @@ module Layers
     class ComponentGenerator < Rails::Generators::NamedBase
       include ComponentTemplates
 
-      AUTOLOAD_LIB = /config\.autoload_lib\(ignore: %w\[[^\]]*\]\)/
-
       def create_gemspec
         create_file component_path("#{file_name}.gemspec"), gemspec
       end
@@ -55,17 +53,11 @@ module Layers
         chmod 'bin/test_components', 0o755
       end
 
-      def ignore_component_in_autoloader
-        gsub_file 'config/application.rb', AUTOLOAD_LIB do |match|
-          match.include?(file_name) ? match : match.sub(']', " #{file_name}]")
-        end
-      end
-
 
       private
 
       def component_path(*segments)
-        File.join('lib', file_name, *segments)
+        File.join('components', file_name, *segments)
       end
 
       def module_name
