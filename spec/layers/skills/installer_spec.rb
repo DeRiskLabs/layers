@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require 'layers_spec_helper'
+require 'layers/skills/installer'
+require 'layers/skills/cloner'
 require 'tmpdir'
 
-RSpec.describe Layers::SkillsInstaller do
+RSpec.describe Layers::Skills::Installer do
   subject(:installer) { described_class.new(target_dir: target_dir, specs: specs) }
 
   let(:workspace) { Dir.mktmpdir }

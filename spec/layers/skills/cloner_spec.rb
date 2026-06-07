@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require 'layers_spec_helper'
+require 'layers/skills/installer'
+require 'layers/skills/cloner'
 require 'tmpdir'
 
-RSpec.describe Layers::SkillsCloner do
+RSpec.describe Layers::Skills::Cloner do
   subject(:cloner) do
     described_class.new(target_dir: target_dir, base_url: base_url, runner: runner)
   end

@@ -389,48 +389,50 @@ module Layers
     def resolve: (Symbol key) -> untyped
   end
 
-  class SkillsInstaller
-    class NoSkillCollections < Layers::Error
+  module Skills
+    class Installer
+      class NoSkillCollections < Layers::Error
+      end
+
+      GEM_PREFIX: String
+
+      def self.installed_specs: () -> Array[Gem::Specification]
+
+      def initialize: (target_dir: String, ?specs: Array[Gem::Specification]) -> void
+
+      def install: () -> Array[String]
+
+      private
+
+      attr_reader target_dir: String
+      attr_reader specs: Array[Gem::Specification]
+
+      def install_collection: (Gem::Specification spec) -> String
+      def copy_entries: (String source, String destination) -> void
     end
 
-    GEM_PREFIX: String
+    class Cloner
+      class GitCommandFailed < Layers::Error
+      end
 
-    def self.installed_specs: () -> Array[Gem::Specification]
+      COLLECTIONS: Array[String]
+      DEFAULT_BASE_URL: String
 
-    def initialize: (target_dir: String, ?specs: Array[Gem::Specification]) -> void
+      def initialize: (target_dir: String, ?base_url: String, ?runner: ^(*String) -> boolish) -> void
 
-    def install: () -> Array[String]
+      def clone: () -> Hash[String, Symbol]
 
-    private
+      private
 
-    attr_reader target_dir: String
-    attr_reader specs: Array[Gem::Specification]
+      attr_reader target_dir: String
+      attr_reader base_url: String
+      attr_reader runner: ^(*String) -> boolish
 
-    def install_collection: (Gem::Specification spec) -> String
-    def copy_entries: (String source, String destination) -> void
-  end
-
-  class SkillsCloner
-    class GitCommandFailed < Layers::Error
+      def clone_or_pull: (String collection) -> Symbol
+      def pull: (String destination, String collection) -> Symbol
+      def repo_url: (String collection) -> String
+      def run: (*String command, collection: String) -> void
     end
-
-    COLLECTIONS: Array[String]
-    DEFAULT_BASE_URL: String
-
-    def initialize: (target_dir: String, ?base_url: String, ?runner: ^(*String) -> boolish) -> void
-
-    def clone: () -> Hash[String, Symbol]
-
-    private
-
-    attr_reader target_dir: String
-    attr_reader base_url: String
-    attr_reader runner: ^(*String) -> boolish
-
-    def clone_or_pull: (String collection) -> Symbol
-    def pull: (String destination, String collection) -> Symbol
-    def repo_url: (String collection) -> String
-    def run: (*String command, collection: String) -> void
   end
 
   module Graphql
