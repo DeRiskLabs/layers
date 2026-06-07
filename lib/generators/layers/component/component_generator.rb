@@ -32,6 +32,10 @@ module Layers
         create_file component_path('lib', file_name, 'configuration.rb'), configuration
       end
 
+      def create_rspec_config
+        create_file component_path('.rspec'), rspec_config
+      end
+
       def create_spec_helper
         create_file component_path('spec', 'spec_helper.rb'), spec_helper
       end

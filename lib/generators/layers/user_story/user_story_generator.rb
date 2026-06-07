@@ -59,10 +59,10 @@ module Layers
               }
             end
 
-            let(:current_identity) { nil } # TODO: FactoryBot.create(:identity)
+            let(:current_authorization) { nil } # TODO: the security credential (double or factory)
 
             let(:valid_use_case_args) do
-              { current_identity: current_identity } # TODO: the inputs the story declares
+              { current_authorization: current_authorization } # TODO: the inputs the story declares
             end
 
             let(:valid_params) { valid_listener_args.merge(valid_use_case_args) }

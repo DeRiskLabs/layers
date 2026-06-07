@@ -17,6 +17,7 @@ require 'layers/base_registry'
 
 require 'layers/dsl'
 require 'layers/base_layer'
+require 'layers/base_form'
 
 require 'layers/query_builder'
 require 'layers/base_query_object'

@@ -354,6 +354,18 @@ module Layers
     def extracted_errors: (untyped value) -> Array[String]
   end
 
+  class BaseForm
+    attr_writer persisted: bool
+
+    def form_error_messages: () -> Array[String]
+    def new_record?: () -> bool
+    def persisted?: () -> bool
+
+    private
+
+    def report_full_errors_for: () -> Array[Symbol]
+  end
+
   class BaseRegistry
     class NotRegistered < Layers::Error
     end

@@ -34,7 +34,7 @@ module Layers
 
       def wiring_section
         ["user_story '#{user_story_ref}'",
-         'user_story_arg :current_identity']
+         'user_story_arg :current_authorization']
       end
 
       def success_section
@@ -47,10 +47,11 @@ module Layers
       end
 
       def failure_section
-        ['def on_failure(errors: nil)',
+        ["def on_failure(#{resource}: nil, errors: nil)",
+         "  errors_list = Array(#{resource} ? #{resource}.errors : errors)",
          '  {',
-         "    #{resource}: nil,",
-         '    errors: execution_errors_for(errors),',
+         "    #{resource}: #{resource},",
+         '    errors: execution_errors_for(errors_list),',
          '  }',
          'end']
       end

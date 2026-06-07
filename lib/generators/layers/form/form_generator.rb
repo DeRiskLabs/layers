@@ -8,6 +8,8 @@ module Layers
     class FormGenerator < Rails::Generators::NamedBase
       include GeneratorHelpers
 
+      class_option :parent, type: :string, default: 'ApplicationForm'
+
       def create_form
         create_file File.join('app/lib/forms', class_path, "#{form_file_name}.rb"),
                     namespaced('Forms', declaration, body)
@@ -26,45 +28,23 @@ module Layers
       end
 
       def declaration
-        "class #{form_file_name.camelize}"
+        "class #{form_file_name.camelize} < #{options[:parent]}"
       end
 
       def body
-        [*header_section, '', '', *error_messages_section, '', '', *builders_placeholder,
-         '', '', *duck_typing_section, '', '', *private_section]
+        [*header_section, '', '', *builders_placeholder, '', '', *private_section]
       end
 
       def header_section
-        ['include ActiveModel::Model',
-         '',
-         'attr_writer :persisted',
-         '# TODO: add form attributes with one accessor per input',
+        ['# TODO: add form attributes with one accessor per input',
          '# attr_accessor :attribute',
          '',
          '# TODO: perform form validations (messages via I18n.t)',
          '# validates :attribute, presence: true']
       end
 
-      def error_messages_section
-        ['def form_error_messages',
-         '  errors.select do |error|',
-         '    report_full_errors_for.include? error.attribute',
-         '  end.map(&:full_message).compact.reject(&:empty?)',
-         'end']
-      end
-
       def builders_placeholder
         ['# TODO: memoized builders for the domain objects the use case will persist']
-      end
-
-      def duck_typing_section
-        ['def new_record?',
-         '  !persisted?',
-         'end',
-         '',
-         'def persisted?',
-         '  @persisted ||= false',
-         'end']
       end
 
       def private_section
@@ -97,13 +77,6 @@ module Layers
 
             describe 'Attributes' do
               # Follow skill: testing-form-objects
-            end
-
-            describe 'Form Duck Typing' do
-              it { is_expected.to respond_to(:errors) }
-              it { is_expected.to respond_to(:new_record?) }
-              it { is_expected.to respond_to(:persisted?) }
-              it { is_expected.to respond_to(:valid?) }
             end
 
             describe 'Validations' do

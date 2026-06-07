@@ -43,6 +43,7 @@ echo "==> writing layer stack"
 mkdir -p "$appdir/app/lib/use_cases/widgets" \
          "$appdir/app/lib/user_stories/widgets" \
          "$appdir/app/lib/queries" \
+         "$appdir/app/lib/forms" \
          "$appdir/app/lib/instrumenters"
 
 cat > "$appdir/app/lib/use_cases/application_use_case.rb" <<'RUBY'
@@ -50,6 +51,15 @@ cat > "$appdir/app/lib/use_cases/application_use_case.rb" <<'RUBY'
 
 module UseCases
   class ApplicationUseCase < Layers::BaseLayer
+  end
+end
+RUBY
+
+cat > "$appdir/app/lib/forms/application_form.rb" <<'RUBY'
+# frozen_string_literal: true
+
+module Forms
+  class ApplicationForm < Layers::BaseForm
   end
 end
 RUBY
@@ -470,6 +480,10 @@ end
 check('generated user story loads') { UserStories::Gadgets::Register.is_a?(Class) }
 check('generated query object loads') { Queries::GadgetsQuery.is_a?(Class) }
 check('generated form loads and validates') { Forms::Gadgets::CreateForm.new.valid? }
+check('generated form inherits Layers::BaseForm') do
+  Forms::Gadgets::CreateForm.ancestors.include?(Layers::BaseForm) &&
+    Forms::Gadgets::CreateForm.new.form_error_messages == []
+end
 check('generated component has a gemspec') do
   Rails.root.join('components/billing/billing.gemspec').exist?
 end

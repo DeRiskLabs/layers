@@ -105,6 +105,14 @@ module Layers
         RUBY
       end
 
+      def rspec_config
+        <<~TEXT
+          --require spec_helper
+          --color
+          --format documentation
+        TEXT
+      end
+
       def spec_helper
         <<~RUBY
           # frozen_string_literal: true

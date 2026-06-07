@@ -135,6 +135,9 @@ end
 
 class BaseUserStory < Layers::BaseLayer
 end
+
+class ApplicationForm < Layers::BaseForm
+end
 ```
 
 - **Use cases** (`UseCases::*`) perform a single transactional write
@@ -441,6 +444,34 @@ module Members
   end
 end
 ```
+
+## Form Objects
+
+`Layers::BaseForm` is the validation boundary: an `ActiveModel::Model` that validates
+incoming params and builds the domain objects a use case will persist. The base carries
+the shared anatomy so every form does not repeat it:
+
+```ruby
+class Forms::Orders::CreateForm < ApplicationForm
+  attr_accessor :customer_name
+
+  validates :customer_name, presence: true
+
+  private
+
+  def report_full_errors_for
+    %i[customer_name]
+  end
+end
+```
+
+- `form_error_messages` — the curated error reader: only errors for attributes
+  whitelisted by the private `report_full_errors_for` override surface (default: none).
+  Controllers and serializers render these without knowing the form.
+- Model duck typing — `new_record?` / `persisted?` (create-style semantics by default:
+  `persisted?` is `false` until the writer sets it; update-style forms override).
+- The form **builds**, it never saves — persistence belongs to the use case consuming
+  it (`required :form` + `delegate :valid?, to: :form`).
 
 ## Query Objects
 

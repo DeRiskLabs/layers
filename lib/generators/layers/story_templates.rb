@@ -13,7 +13,7 @@ module Layers
       end
 
       def story_contract_section
-        ['required :current_identity # TODO: declare the inputs this story receives',
+        ['required :current_authorization # TODO: declare the inputs this story receives',
          '',
          "emits success: [:#{resource}], failure: [:errors] # TODO: declare the real payloads"]
       end

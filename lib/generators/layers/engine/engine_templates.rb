@@ -298,6 +298,8 @@ module Layers
       def rspec_config_content
         <<~TEXT
           --require rails_helper
+          --color
+          --format documentation
         TEXT
       end
 

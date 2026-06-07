@@ -38,7 +38,7 @@ module Layers
 
       def wiring_section
         ["user_story '#{user_story_ref}'",
-         'user_story_arg :current_identity']
+         'user_story_arg :current_authorization']
       end
 
       def success_section
@@ -48,8 +48,9 @@ module Layers
       end
 
       def failure_section
-        ['def on_failure(errors: nil)',
-         '  errors&.map do |error|',
+        ["def on_failure(#{payload_key}: nil, errors: nil)",
+         "  errors_list = Array(#{payload_key} ? #{payload_key}.errors : errors)",
+         '  errors_list.map do |error|',
          '    GraphQL::ExecutionError.new(error.message)',
          '  end',
          'end']
@@ -73,9 +74,9 @@ module Layers
       end
 
       def story_inputs_section
-        return ['required :current_identity', 'required :id'] if single?
+        return ['required :current_authorization', 'required :id'] if single?
 
-        ['required :current_identity']
+        ['required :current_authorization']
       end
 
       def story_lookup_section
@@ -84,9 +85,9 @@ module Layers
 
       def story_lookup_placeholder
         if single?
-          "nil # TODO: find by uuid (id) via #{registry_access}, identity-scoped"
+          "nil # TODO: find by uuid (id) via #{registry_access}, scoped via current_authorization"
         else
-          "[] # TODO: ask #{registry_access}, scoped to current_identity"
+          "[] # TODO: ask #{registry_access}, scoped to current_authorization"
         end
       end
 
