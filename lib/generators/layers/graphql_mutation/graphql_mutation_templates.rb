@@ -27,6 +27,7 @@ module Layers
       def payload_section
         ["field :#{resource}, #{type_constant}, null: true,",
          "  description: 'The #{resource.humanize.downcase}'",
+         '',
          'field :errors, [Types::Base::ErrorType], null: true,',
          "  description: 'Errors encountered while #{progressive_phrase}'"]
       end
@@ -40,7 +41,7 @@ module Layers
         ["def on_success(#{resource}: nil)",
          '  {',
          "    #{resource}: #{resource},",
-         '    errors: []',
+         '    errors: [],',
          '  }',
          'end']
       end
@@ -49,21 +50,13 @@ module Layers
         ['def on_failure(errors: nil)',
          '  {',
          "    #{resource}: nil,",
-         '    errors: execution_errors_for(errors)',
+         '    errors: execution_errors_for(errors),',
          '  }',
          'end']
       end
 
       def story_declaration
         "class #{file_name.camelize} < ApplicationUserStory"
-      end
-
-      def story_body
-        ['required :current_identity',
-         '',
-         'def call',
-         "  success(#{resource}: nil)",
-         'end']
       end
 
       def resource

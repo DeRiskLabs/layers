@@ -17,7 +17,7 @@ module Layers
 
       def create_spec
         create_file File.join('spec/lib/queries', class_path, "#{query_file_name}_spec.rb"),
-                    pending_spec(qualified_name, 'testing-query-objects')
+                    query_spec
       end
 
 
@@ -39,13 +39,48 @@ module Layers
           'private',
           '',
           'def build_relation_defaults!',
-          '  @relation = relation',
+          '  @relation = relation # TODO: apply the default scope (ordering, identity scoping)',
           'end',
         ]
       end
 
       def qualified_name
         ['Queries', *class_path.map(&:camelize), query_file_name.camelize].join('::')
+      end
+
+      def query_spec
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require 'rails_helper'
+
+          RSpec.describe #{qualified_name} do
+
+            subject(:query) { described_class.new(**query_options) }
+
+            let(:query_options) do
+              {
+                # TODO: the scope this query is constructed with (e.g. identity: identity)
+              }
+            end
+
+            describe '#all' do
+
+              execute(:results) do
+                query.all
+              end
+
+              it 'TODO: returns only records in scope (one in-scope, one out-of-scope record)'
+
+              context 'when nothing is in scope' do
+                it 'TODO: returns an empty collection'
+              end
+            end
+
+            # TODO: one describe per refiner - assert it returns the query (be(query))
+            # and refines the relation
+          end
+        RUBY
       end
     end
   end

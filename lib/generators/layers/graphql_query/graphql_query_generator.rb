@@ -23,7 +23,9 @@ module Layers
       end
 
       def create_spec
-        create_file spec_path, pending_spec("'#{graphql_field} query'", 'testing-graphql')
+        create_file spec_path,
+                    pending_spec("'#{graphql_field} query'", 'testing-graphql',
+                                 ['success', 'authentication required'])
       end
 
       def register_resolver

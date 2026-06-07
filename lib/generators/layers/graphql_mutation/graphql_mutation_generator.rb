@@ -2,12 +2,14 @@
 
 require 'rails/generators'
 require 'generators/layers/generator_helpers'
+require 'generators/layers/story_templates'
 require 'generators/layers/graphql_mutation/graphql_mutation_templates'
 
 module Layers
   module Generators
     class GraphqlMutationGenerator < Rails::Generators::NamedBase
       include GeneratorHelpers
+      include StoryTemplates
       include GraphqlMutationTemplates
 
       class_option :engine, type: :string, default: 'graph'
@@ -23,7 +25,9 @@ module Layers
       end
 
       def create_spec
-        create_file spec_path, pending_spec("'#{graphql_field} mutation'", 'testing-graphql')
+        create_file spec_path,
+                    pending_spec("'#{graphql_field} mutation'", 'testing-graphql',
+                                 ['success', 'validation failure', 'authentication required'])
       end
 
       def register_mutation

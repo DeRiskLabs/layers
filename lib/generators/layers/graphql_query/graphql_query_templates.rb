@@ -42,8 +42,8 @@ module Layers
       end
 
       def success_section
-        ['def on_success(result: nil)',
-         '  result',
+        ["def on_success(#{payload_key}: nil)",
+         "  #{payload_key}",
          'end']
       end
 
@@ -60,15 +60,42 @@ module Layers
       end
 
       def story_body
-        ['required :current_identity',
+        [*story_inputs_section, '',
+         "emits success: [:#{payload_key}], failure: [:errors] # TODO: confirm the payloads",
          '',
          'def call',
-         '  success(result: nil)',
-         'end']
+         "  success(#{payload_key}: #{payload_key})",
+         'end',
+         '', '',
+         'private',
+         '',
+         *story_lookup_section]
+      end
+
+      def story_inputs_section
+        return ['required :current_identity', 'required :id'] if single?
+
+        ['required :current_identity']
+      end
+
+      def story_lookup_section
+        ["def #{payload_key}", "  #{story_lookup_placeholder}", 'end']
+      end
+
+      def story_lookup_placeholder
+        if single?
+          'nil # TODO: find by public uuid (id), scoped to current_identity'
+        else
+          '[] # TODO: the identity-scoped collection (usually a query object)'
+        end
       end
 
       def story_name
         single? ? 'fetch' : 'fetch_all'
+      end
+
+      def payload_key
+        single? ? domain.singularize : domain
       end
 
       def user_story_ref

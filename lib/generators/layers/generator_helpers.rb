@@ -33,16 +33,22 @@ module Layers
         (depth - 1).downto(0).map { |index| "#{'  ' * index}end" }
       end
 
-      def pending_spec(described, testing_skill)
+      def pending_spec(described, testing_skill, cases)
         <<~RUBY
           # frozen_string_literal: true
 
           require 'rails_helper'
 
           RSpec.describe #{described} do
-            pending "specs for #{described} (follow #{testing_skill})"
+          #{pending_lines(testing_skill, cases)}
           end
         RUBY
+      end
+
+      def pending_lines(testing_skill, cases)
+        first, *rest = cases
+        ["  pending '#{first} (follow #{testing_skill})'",
+         *rest.map { |kase| "  pending '#{kase}'" }].join("\n")
       end
     end
   end
