@@ -800,9 +800,10 @@ suite in isolation). `components/` sits outside the autoload paths — component
 consumed through the Gemfile (`path 'components' do gem 'billing' end`), never
 autoloaded.
 
-### Boundary cops
+### Cops
 
-Two custom RuboCop cops enforce the direction rules mechanically:
+`require: layers/rubocop` loads the gem's custom cops — the boundary cops that enforce
+the direction rules and the house-style layout cop:
 
 ```yaml
 require:
@@ -819,6 +820,9 @@ Layers/UserStoryOutsideAdapter:
 - `Layers/UserStoryOutsideAdapter` — flags `UserStories::` references outside delivery
   adapters (controllers, graphql, the stories themselves, specs/tests); tune with
   `AllowedPaths`.
+- `Layout/PrivateTwoLines` — the house convention of two blank lines before a `private`
+  keyword (autocorrectable). Disable it (`Layout/PrivateTwoLines: { Enabled: false }`)
+  if it is not your style.
 
 ### AI agent skills
 

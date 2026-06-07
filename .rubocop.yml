@@ -4,7 +4,7 @@ plugins:
   - rubocop-rspec
 
 require:
-  - ./.rubocop/cops/layout/private_two_lines.rb
+  - ./lib/rubocop/cop/layout/private_two_lines.rb
 
 AllCops:
   TargetRubyVersion: 3.1

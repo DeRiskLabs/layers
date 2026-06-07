@@ -20,16 +20,17 @@ module RuboCop
           return if blank_lines == 2
 
           add_offense(node) do |corrector|
-            autocorrect(corrector, node, blank_lines)
+            autocorrect(corrector, node)
           end
         end
 
+
         private
 
-        def autocorrect(corrector, node, blank_lines)
+        def autocorrect(corrector, node)
           range = range_between(
             find_last_code_line(processed_source, node.first_line - 1),
-            node.source_range.begin_pos
+            node.source_range.begin_pos,
           )
 
           corrector.replace(range, "\n\n\n")
