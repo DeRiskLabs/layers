@@ -65,11 +65,11 @@ distribution from a private git source.
   nothing memoized), a `defaults` hook for subclass seed entries, and
   `registered`/`registered?`/`remove`/`to_h` introspection; components pair
   it with a `Configuration` exposing `repo` and registration delegators
-- `Layers::SkillsInstaller` and the `layers:sync_skills` task — copies every
+- `Layers::Skills::Installer` and the `layers:sync_skills` task — copies every
   bundled `ai-derisk_*` skill collection gem into a chosen directory, one
   subdirectory per collection, replacing each on every run so the copies
   track the bundled versions
-- `Layers::SkillsCloner` and the `layers:clone_skills` task — clones (or
+- `Layers::Skills::Cloner` and the `layers:clone_skills` task — clones (or
   fast-forward pulls) the live `AI-derisk_*` skill repositories for teams
   that contribute skills back
 - `Layers::Railtie` — loads the gem's rake tasks inside Rails applications
