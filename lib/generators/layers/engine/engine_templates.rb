@@ -36,6 +36,9 @@ module Layers
           source 'https://rubygems.org'
 
           gemspec
+
+          # TODO: drop the git source once layers is publicly available
+          gem 'layers', git: 'git@github.com:DeRiskLabs/layers.git'
         RUBY
       end
 
