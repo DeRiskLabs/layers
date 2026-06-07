@@ -6,8 +6,10 @@
 # and then asserts: the app's own suite passes, each generated engine's standalone
 # suite passes in its own directory, and the component's isolated suite passes.
 #
-# Run via bin/smoke_test (or: bundle exec rspec -O acceptance/.rspec acceptance).
-# Not part of the default `bundle exec rspec` run.
+# Run via bin/smoke_test (or: bundle exec rspec -O acceptance/.rspec
+# --pattern 'acceptance/*_spec.rb' — the pattern keeps RSpec away from the
+# fixture specs, which only load inside the built app). Not part of the
+# default `bundle exec rspec` run.
 
 require_relative 'support/skeleton_app'
 
