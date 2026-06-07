@@ -32,6 +32,13 @@ gem 'kaminari'
 gem 'layers', git: '${gem_root}', branch: '${gem_branch}'
 GEMFILE
 
+echo "==> configuring a session store (feature engines re-use the app's)"
+cat > "$appdir/config/initializers/session_store.rb" <<'RUBY'
+# frozen_string_literal: true
+
+Rails.application.config.session_store :cookie_store, key: '_smoke_app_session'
+RUBY
+
 echo "==> writing layer stack"
 mkdir -p "$appdir/app/lib/use_cases/widgets" \
          "$appdir/app/lib/user_stories/widgets" \
@@ -508,6 +515,22 @@ check('generated graphql acceptance specs exist') do
     Rails.root.join("spec/acceptance/graph/articles/#{name}_spec.rb").exist?
   end
 end
+check('generated feature engine boots') { BillingPortal::Engine.ancestors.include?(Rails::Engine) }
+check('generated feature engine bases load') do
+  UseCases::BillingPortal::BaseUseCase.ancestors.include?(Layers::BaseLayer) &&
+    UserStories::BillingPortal::BaseUserStory.ancestors.include?(Layers::BaseLayer)
+end
+check('generated api engine boots api_only') { V2::Engine.config.api_only == true }
+check('generated engines are mounted') do
+  routes = Rails.root.join('config/routes.rb').read
+  routes.include?("mount BillingPortal::Engine, at: '/'") &&
+    routes.include?("mount V2::Engine, at: '/v2'")
+end
+check('generated engines consumed via path blocks') do
+  gemfile = Rails.root.join('Gemfile').read
+  gemfile.include?("path 'engines' do\n  gem 'billing_portal'") &&
+    gemfile.include?("path 'apis' do\n  gem 'v2'")
+end
 
 puts
 if $failures.empty?
@@ -554,7 +577,12 @@ echo "==> running generators"
   && bin/rails generate layers:component billing --quiet \
   && bin/rails generate layers:graphql_mutation articles/create_article --quiet \
   && bin/rails generate layers:graphql_query articles --quiet \
-  && bin/rails generate layers:graphql_query articles --single --quiet)
+  && bin/rails generate layers:graphql_query articles --single --quiet \
+  && bin/rails generate layers:engine billing_portal --quiet \
+  && bin/rails generate layers:engine v2 --family api --quiet)
+
+echo "==> bundling generated engines"
+(cd "$appdir" && bundle install --quiet)
 
 echo "==> running smoke checks"
 (cd "$appdir" && bin/rails runner smoke_checks.rb)
