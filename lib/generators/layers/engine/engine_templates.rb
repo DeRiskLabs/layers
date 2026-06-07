@@ -23,6 +23,7 @@ module Layers
               Dir['{app,config,db,lib}/**/*', 'Rakefile', 'README.md']
             end
 
+            spec.add_dependency 'layers'
             spec.add_dependency 'rails', '>= #{rails_version}'
           end
         RUBY
