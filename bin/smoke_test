@@ -531,6 +531,22 @@ check('generated engines consumed via path blocks') do
   gemfile.include?("path 'engines' do\n  gem 'billing_portal'") &&
     gemfile.include?("path 'apis' do\n  gem 'v2'")
 end
+check('generated engine initializers exist') do
+  Rails.root.join('config/initializers/billing_portal.rb').exist? &&
+    Rails.root.join('config/initializers/v2.rb').exist?
+end
+check('engine use case registry resolves container constants') do
+  BillingPortal.configure do |config|
+    config.register_use_case create_widget: 'UseCases::Widgets::Create'
+  end
+  BillingPortal.configuration.use_cases[:create_widget].equal?(UseCases::Widgets::Create)
+end
+check('engine query object registry resolves container constants') do
+  V2.configure do |config|
+    config.register_query_object gadgets: 'Queries::GadgetsQuery'
+  end
+  V2.configuration.queries[:gadgets].equal?(Queries::GadgetsQuery)
+end
 
 puts
 if $failures.empty?
@@ -583,6 +599,14 @@ echo "==> running generators"
 
 echo "==> bundling generated engines"
 (cd "$appdir" && bundle install --quiet)
+
+echo "==> engine standalone suites (schema-less dummy apps)"
+for engine in engines/billing_portal apis/v2; do
+  (cd "$appdir/$engine" \
+    && sed -i '' "s|git: 'git@github.com:DeRiskLabs/layers.git'|path: '${gem_root}'|" Gemfile \
+    && BUNDLE_GEMFILE=Gemfile bundle install --quiet \
+    && BUNDLE_GEMFILE=Gemfile bundle exec rspec)
+done
 
 echo "==> running smoke checks"
 (cd "$appdir" && bin/rails runner smoke_checks.rb)

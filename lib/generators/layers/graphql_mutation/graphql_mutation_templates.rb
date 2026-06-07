@@ -63,6 +63,26 @@ module Layers
         @resource ||= (class_path.last || file_name).singularize
       end
 
+      def use_case_constant
+        "#{api_module}.configuration.use_cases[:#{registry_key}]"
+      end
+
+      def registry_key
+        [*class_path, file_name].join('_')
+      end
+
+      def container_use_case
+        ['UseCases', *class_path.map(&:camelize), file_name.camelize].join('::')
+      end
+
+      def use_case_registration_line
+        "config.register_use_case #{registry_key}: '#{container_use_case}'"
+      end
+
+      def initializer_path
+        File.join('config/initializers', "#{api}.rb")
+      end
+
       def type_constant
         "Types::#{resource.pluralize.camelize}::Type"
       end

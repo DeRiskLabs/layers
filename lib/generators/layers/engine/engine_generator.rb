@@ -30,6 +30,14 @@ module Layers
         create_file engine_path("lib/#{file_name}/engine.rb"), engine_content
       end
 
+      def create_registries
+        create_file engine_path("lib/#{file_name}/use_case_registry.rb"),
+                    use_case_registry_content
+        create_file engine_path("lib/#{file_name}/query_object_registry.rb"),
+                    query_object_registry_content
+        create_file engine_path("lib/#{file_name}/configuration.rb"), configuration_content
+      end
+
       def create_routes
         create_file engine_path('config/routes.rb'), routes_content
       end
@@ -46,8 +54,29 @@ module Layers
                     user_story_base_content
       end
 
-      def create_spec_home
-        create_file engine_path('spec/.keep'), ''
+      def create_spec_scaffolding
+        create_file engine_path('.rspec'), rspec_config_content
+        create_file engine_path('spec/spec_helper.rb'), spec_helper_content
+        create_file engine_path('spec/rails_helper.rb'), rails_helper_content
+        create_file engine_path("spec/#{file_name}_spec.rb"), root_spec_content
+      end
+
+      def create_dummy_app
+        create_file engine_path('spec/dummy/config/application.rb'), dummy_application_content
+        create_file engine_path('spec/dummy/config/environment.rb'), dummy_environment_content
+        create_file engine_path('spec/dummy/config/routes.rb'), dummy_routes_content
+      end
+
+      def create_container_initializer
+        create_file File.join('config/initializers', "#{file_name}.rb"),
+                    container_initializer_content
+      end
+
+      def create_test_suite_runner
+        return if File.exist?(File.join(destination_root, 'bin/test_suite'))
+
+        create_file 'bin/test_suite', test_suite_content
+        chmod 'bin/test_suite', 0o755
       end
 
       def register_in_gemfile

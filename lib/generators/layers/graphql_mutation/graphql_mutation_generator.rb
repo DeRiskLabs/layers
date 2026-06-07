@@ -39,6 +39,15 @@ module Layers
                          after: /class MutationType[^\n]*\n/
       end
 
+      def register_use_case_in_container
+        unless File.exist?(File.join(destination_root, initializer_path))
+          return say("register in #{initializer_path}: #{use_case_registration_line}")
+        end
+
+        inject_into_file initializer_path, "  #{use_case_registration_line}\n",
+                         after: /\.configure do \|config\|[^\n]*\n/
+      end
+
 
       private
 

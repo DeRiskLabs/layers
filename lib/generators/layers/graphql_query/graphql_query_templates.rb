@@ -84,10 +84,30 @@ module Layers
 
       def story_lookup_placeholder
         if single?
-          'nil # TODO: find by public uuid (id), scoped to current_identity'
+          "nil # TODO: find by uuid (id) via #{registry_access}, identity-scoped"
         else
-          '[] # TODO: the identity-scoped collection (usually a query object)'
+          "[] # TODO: ask #{registry_access}, scoped to current_identity"
         end
+      end
+
+      def registry_access
+        "#{api_module}.configuration.queries[:#{registry_key}]"
+      end
+
+      def registry_key
+        [*class_path, domain].join('_')
+      end
+
+      def container_query_object
+        ['Queries', *class_path.map(&:camelize), "#{domain.camelize}Query"].join('::')
+      end
+
+      def query_registration_line
+        "config.register_query_object #{registry_key}: '#{container_query_object}'"
+      end
+
+      def initializer_path
+        File.join('config/initializers', "#{api}.rb")
       end
 
       def story_name

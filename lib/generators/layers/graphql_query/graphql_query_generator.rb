@@ -37,6 +37,20 @@ module Layers
                          after: /class QueryType[^\n]*\n/
       end
 
+      def register_query_object_in_container
+        unless File.exist?(File.join(destination_root, initializer_path))
+          return say("register in #{initializer_path}: #{query_registration_line}")
+        end
+
+        if File.read(File.join(destination_root, initializer_path))
+               .include?(query_registration_line)
+          return
+        end
+
+        inject_into_file initializer_path, "  #{query_registration_line}\n",
+                         after: /\.configure do \|config\|[^\n]*\n/
+      end
+
 
       private
 

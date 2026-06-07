@@ -39,6 +39,11 @@ module Layers
 
           # TODO: drop the git source once layers is publicly available
           gem 'layers', git: 'git@github.com:DeRiskLabs/layers.git'
+
+          group :development, :test do
+            gem 'always_execute'
+            gem 'rspec-rails'
+          end
         RUBY
       end
 
@@ -63,10 +68,86 @@ module Layers
         <<~RUBY
           # frozen_string_literal: true
 
+          require 'layers'
           require '#{file_name}/version'
+          require '#{file_name}/use_case_registry'
+          require '#{file_name}/query_object_registry'
+          require '#{file_name}/configuration'
           require '#{file_name}/engine'
 
           module #{class_name}
+            class << self
+              def configuration
+                @configuration ||= Configuration.new
+              end
+
+              def configure
+                yield(configuration)
+              end
+            end
+          end
+        RUBY
+      end
+
+      def use_case_registry_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          module #{class_name}
+            class UseCaseRegistry < Layers::BaseRegistry
+              alias register_use_case register
+              alias register_use_cases register
+              alias remove_use_case remove
+            end
+          end
+        RUBY
+      end
+
+      def query_object_registry_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          module #{class_name}
+            class QueryObjectRegistry < Layers::BaseRegistry
+              alias register_query_object register
+              alias register_query_objects register
+              alias remove_query_object remove
+            end
+          end
+        RUBY
+      end
+
+      def configuration_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          module #{class_name}
+            class Configuration
+              attr_writer :use_cases, :queries
+
+              delegate :register_use_case, :register_use_cases, to: :use_cases
+              delegate :register_query_object, :register_query_objects, to: :queries
+
+              def use_cases
+                @use_cases ||= UseCaseRegistry.new
+              end
+
+              def queries
+                @queries ||= QueryObjectRegistry.new
+              end
+            end
+          end
+        RUBY
+      end
+
+      def container_initializer_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          #{class_name}.configure do |config|
+            # TODO: register the commands and queries this engine is allowed to reach
+            # config.register_use_case create_thing: 'UseCases::Things::Create'
+            # config.register_query_object things: 'Queries::ThingsQuery'
           end
         RUBY
       end
@@ -212,6 +293,124 @@ module Layers
             end
           end
         RUBY
+      end
+
+      def rspec_config_content
+        <<~TEXT
+          --require rails_helper
+        TEXT
+      end
+
+      def spec_helper_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require 'always_execute'
+
+          RSpec.configure do |config|
+            config.disable_monkey_patching!
+            config.order = :random
+            Kernel.srand config.seed
+          end
+        RUBY
+      end
+
+      def rails_helper_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          ENV['RAILS_ENV'] ||= 'test'
+
+          require 'spec_helper'
+          require_relative 'dummy/config/environment'
+          require 'rspec/rails'
+        RUBY
+      end
+
+      def dummy_application_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require 'action_controller/railtie'
+          require '#{file_name}'
+
+          module Dummy
+            class Application < Rails::Application
+              config.load_defaults Rails::VERSION::STRING.to_f
+              config.eager_load = false
+              config.hosts.clear
+              config.secret_key_base = 'dummy'
+              #{dummy_session_line}
+            end
+          end
+        RUBY
+      end
+
+      def dummy_session_line
+        return 'config.api_only = true' if api?
+
+        "config.session_store :cookie_store, key: '_dummy_session'"
+      end
+
+      def dummy_environment_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require_relative 'application'
+
+          Rails.application.initialize!
+        RUBY
+      end
+
+      def dummy_routes_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          Rails.application.routes.draw do
+            mount #{class_name}::Engine, at: '#{mount_path}'
+          end
+        RUBY
+      end
+
+      def root_spec_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require 'rails_helper'
+
+          RSpec.describe #{class_name} do
+            it 'carries a use case registry' do
+              expect(described_class.configuration.use_cases).to be_a(#{class_name}::UseCaseRegistry)
+            end
+
+            it 'carries a query object registry' do
+              expect(described_class.configuration.queries).to be_a(#{class_name}::QueryObjectRegistry)
+            end
+          end
+        RUBY
+      end
+
+      def test_suite_content
+        <<~BASH
+          #!/usr/bin/env bash
+          set -uo pipefail
+
+          status=0
+
+          echo "==> container suite"
+          bundle exec rspec || status=1
+
+          for slice in components/*/ engines/*/ apis/*/; do
+            [ -f "${slice}Gemfile" ] || continue
+            echo "==> ${slice}"
+            (cd "$slice" \\
+              && (BUNDLE_GEMFILE=Gemfile bundle check >/dev/null 2>&1 \\
+                  || BUNDLE_GEMFILE=Gemfile bundle install --quiet) \\
+              && BUNDLE_GEMFILE=Gemfile bundle exec rspec) || status=1
+          done
+
+          exit $status
+        BASH
       end
 
       def rails_version
