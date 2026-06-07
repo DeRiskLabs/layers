@@ -768,10 +768,21 @@ $ bin/rails generate layers:form widgets/create          # app/lib/forms/widgets
 ```
 
 Each accepts `--parent` to override the default base class (`ApplicationUseCase`,
-`ApplicationUserStory`, `ApplicationQuery`).
+`ApplicationUserStory`, `ApplicationQuery`, `ApplicationForm`).
+
+The engine generator scaffolds a whole mountable slice — gemspec, `engine.rb` in the
+family stance, routes, engine `ApplicationController`, engine-local layer bases, the
+injected use-case/query-object registries with their `Configuration`, a container
+initializer, a standalone spec home (schema-less dummy app), the Gemfile `path` entry,
+and the mount line:
+
+```bash
+$ bin/rails generate layers:engine billing_portal       # feature engine, engines/
+$ bin/rails generate layers:engine v2 --family api       # API engine, apis/
+```
 
 The GraphQL pair generates declarative endpoints into the API engine — the endpoint,
-its engine-local user story (`required :current_identity` mirroring `user_story_arg`),
+its engine-local user story (`required :current_authorization` mirroring `user_story_arg`),
 a pending acceptance spec, and the `MutationType`/`QueryType` registration (injected
 when the type file exists, printed otherwise):
 
