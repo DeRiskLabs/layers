@@ -389,6 +389,36 @@ module Layers
     def resolve: (Symbol key) -> untyped
   end
 
+  class Doctor
+    SLICE_DIRS: Array[String]
+
+    class Problem
+      attr_accessor slice: String
+      attr_accessor message: String
+
+      def initialize: (String slice, String message) -> void
+    end
+
+    def initialize: (?root: String) -> void
+
+    def problems: () -> Array[Problem]
+    def ok?: () -> bool
+
+    private
+
+    attr_reader root: String
+
+    def slices: () -> Array[String]
+    def slices_in: (String dir) -> Array[String]
+    def check: (String slice) -> Array[Problem]
+    def gemfile_problem: (String slice) -> Problem?
+    def path_block_problem: (String slice) -> Problem?
+    def spec_dir_problem: (String slice) -> Problem?
+    def suite_runner_problems: () -> Array[Problem]
+    def gemfile_declares?: (String family, String gem_name) -> boolish
+    def root_gemfile: () -> String
+  end
+
   module Skills
     class Installer
       class NoSkillCollections < Layers::Error

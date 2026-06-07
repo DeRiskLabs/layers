@@ -824,6 +824,8 @@ Layers/UseCaseCallsUserStory:
   Enabled: true
 Layers/UserStoryOutsideAdapter:
   Enabled: true
+Layers/SliceReferencesContainerLayer:
+  Enabled: true
 ```
 
 - `Layers/UseCaseCallsUserStory` — flags `UserStories::` references inside `use_cases/`
@@ -831,6 +833,19 @@ Layers/UserStoryOutsideAdapter:
 - `Layers/UserStoryOutsideAdapter` — flags `UserStories::` references outside delivery
   adapters (controllers, graphql, the stories themselves, specs/tests); tune with
   `AllowedPaths`.
+- `Layers/SliceReferencesContainerLayer` — flags `UseCases::` / `Queries::` references
+  inside a slice (`engines/`, `apis/`, `components/`): the container owns those layer
+  families, and a slice reaches them through its injected registry, never by name.
+  Tune the slice paths with `SlicePaths`. (Model-constant references inside a slice are
+  not statically detectable — `layers:doctor` and review cover those.)
+
+### layers:doctor
+
+A structure checker for the modular monolith — run `bin/rails layers:doctor`. It reports
+(and exits non-zero on) slices that are not well-formed bounded contexts: an engine, api
+engine, or component missing its own `Gemfile`, not consumed via a `path '<family>' do
+gem '<name>' end` block in the root Gemfile, or missing its `spec/` directory — plus a
+missing `bin/test_suite` when any slice exists.
 - `Layout/PrivateTwoLines` — the house convention of two blank lines before a `private`
   keyword (autocorrectable). Disable it (`Layout/PrivateTwoLines: { Enabled: false }`)
   if it is not your style.
