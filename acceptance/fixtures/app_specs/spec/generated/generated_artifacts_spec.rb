@@ -144,4 +144,44 @@ RSpec.describe 'generated artifacts' do
       expect(V2.configuration.queries[:gadgets]).to be(Queries::GadgetsQuery)
     end
   end
+
+  describe 'the api_endpoint scaffold' do
+    it 'generates the container use case and form' do
+      expect(UseCases::Orders::Create).to be_a(Class)
+      expect(Forms::Orders::CreateForm.ancestors).to include(Layers::BaseForm)
+    end
+
+    it 'places the engine user story resolving the use case through the registry' do
+      story = Rails.root.join('apis/v2/app/lib/user_stories/v2/orders/create.rb').read
+      expect(story).to include('class Create < BaseUserStory')
+        .and include('V2.configuration.use_cases[:orders_create]')
+    end
+
+    it 'places a controller that delegates to the engine story' do
+      controller = Rails.root.join('apis/v2/app/controllers/v2/orders_controller.rb').read
+      expect(controller).to include('class OrdersController < ApplicationController')
+        .and include('UserStories::V2::Orders::Create.call')
+    end
+
+    it 'places a serializer' do
+      serializer = Rails.root.join('apis/v2/app/serializers/v2/order_serializer.rb').read
+      expect(serializer).to include('class OrderSerializer')
+        .and include('include JSONAPI::Serializer')
+    end
+
+    it 'adds the route' do
+      expect(Rails.root.join('apis/v2/config/routes.rb').read)
+        .to include('resources :orders, only: %i[create], param: :uuid')
+    end
+
+    it 'registers the use case in the engine initializer' do
+      expect(Rails.root.join('config/initializers/v2.rb').read)
+        .to include("config.register_use_case orders_create: 'UseCases::Orders::Create'")
+    end
+
+    it 'creates pending request and routing specs' do
+      expect(Rails.root.join('apis/v2/spec/requests/v2/orders_spec.rb')).to exist
+      expect(Rails.root.join('apis/v2/spec/routing/v2/orders_routing_spec.rb')).to exist
+    end
+  end
 end

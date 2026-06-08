@@ -29,13 +29,13 @@ module Layers
 
       def body
         [*contract_section, '', 'delegate :valid?, to: :form', '', *call_section, '', '',
-         'private', '', *execute_section]
+         'private', '', *form_section, '', *execute_section]
       end
 
       def contract_section
-        ['required :form',
+        ['required :name # TODO: the raw inputs this use case receives',
          '',
-         'emits success: [:form], failure: [:form] # TODO: declare the real outcome payloads']
+         'emits success: [:thing], failure: [:form] # TODO: name the success payload object']
       end
 
       def call_section
@@ -44,13 +44,19 @@ module Layers
          '',
          '  execute!',
          '',
-         '  success(form: form) # TODO: emit the real success payload',
+         '  success(thing: nil) # TODO: emit the persisted object',
+         'end']
+      end
+
+      def form_section
+        ['def form',
+         "  @form ||= #{form_constant}.new(name: name) # TODO: build the peer form",
          'end']
       end
 
       def execute_section
         ['def execute!',
-         '  # TODO: rename to a well named method performing the persistence in a transaction',
+         "  # TODO: persist the form's objects in a transaction",
          'end']
       end
 
@@ -84,11 +90,8 @@ module Layers
               }
             end
 
-            # TODO: stub every reader the use case consumes from the form
-            let(:form) { instance_double('#{form_constant}', valid?: true) }
-
             let(:valid_use_case_args) do
-              { form: form }
+              { name: 'TODO' } # TODO: the raw inputs the use case declares
             end
 
             let(:valid_params) { valid_listener_args.merge(valid_use_case_args) }
@@ -101,23 +104,15 @@ module Layers
               end
 
               context 'when successful' do
-                it 'notifies listener of success' do
-                  expect(listener).to have_received(on_success_callback).with(form: form)
-                end
-
-                it 'TODO: one example per outgoing command (have_received with args)'
+                it 'TODO: notifies the listener of success with the persisted object'
               end
 
               context 'when validation fails' do
-                let(:form) { instance_double('#{form_constant}', valid?: false) }
-
-                it 'notifies listener of failure' do
-                  expect(listener).to have_received(on_failure_callback).with(form: form)
-                end
+                it 'TODO: notifies the listener of failure carrying the form'
               end
 
               context 'when persistence fails' do
-                it 'TODO: notifies listener of failure when the persistence method raises'
+                it 'TODO: notifies the listener of failure'
               end
             end
           end

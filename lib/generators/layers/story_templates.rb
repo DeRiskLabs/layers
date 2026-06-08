@@ -42,7 +42,7 @@ module Layers
          *story_use_case_args_section,
          '',
          'def use_case_options',
-         '  {} # TODO: the inputs the use case requires (e.g. form: a_built_form)',
+         '  {} # TODO: the raw inputs the use case requires (e.g. name:, email:)',
          'end']
       end
 

@@ -25,6 +25,7 @@ class SkeletonApp
     'layers:graphql_query articles --single',
     'layers:engine billing_portal',
     'layers:engine v2 --family api',
+    'layers:api_endpoint orders/create --engine v2',
   ].freeze
 
   ENGINES = ['engines/billing_portal', 'apis/v2'].freeze
@@ -82,6 +83,7 @@ class SkeletonApp
       File.open(File.join(root, 'Gemfile'), 'a') do |gemfile|
         gemfile.puts
         gemfile.puts "gem 'kaminari'"
+        gemfile.puts "gem 'jsonapi-serializer'"
         gemfile.puts "gem 'layers', git: '#{gem_root}', branch: '#{gem_branch}'"
         gemfile.puts
         gemfile.puts 'group :development, :test do'
