@@ -17,14 +17,19 @@ RSpec.describe Queries::WidgetsQuery do
     expect(query.order(sort_field: :name, sort_direction: :asc)).to be(query)
   end
 
-  it 'orders and paginates through kaminari' do
-    names = described_class.new
-                           .order(sort_field: :name, sort_direction: :asc)
-                           .page(1)
-                           .per(2)
-                           .all
-                           .map(&:name)
-    expect(names).to eq(['alpha', 'beta'])
+  context 'ordered and paginated through kaminari' do
+    execute(:names) do
+      described_class.new
+                     .order(sort_field: :name, sort_direction: :asc)
+                     .page(1)
+                     .per(2)
+                     .all
+                     .map(&:name)
+    end
+
+    it 'narrows to the ordered page' do
+      expect(names).to eq(['alpha', 'beta'])
+    end
   end
 
   it 'raises when per is called before page' do

@@ -71,7 +71,9 @@ RSpec.describe Layers::BaseForm do
       end
     end
 
-    before { form.valid? }
+    execute do
+      form.valid?
+    end
 
     it 'surfaces full messages for whitelisted attributes' do
       expect(form.form_error_messages).to contain_exactly("Name can't be blank")
