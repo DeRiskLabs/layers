@@ -13,6 +13,8 @@ group :development do
   gem 'rubocop-rake', '~> 0.6'
   gem 'rubocop-rspec', '~> 3.0'
   gem 'yard', '~> 0.9'
+  # The toolchain gem ships the cops; needed here so the gem can lint itself.
+  gem 'layers-scaffold', path: '../layers-scaffold'
 end
 
 group :development, :test do
