@@ -14,22 +14,6 @@ class SkeletonApp
                     '--skip-solid --skip-ci --skip-rubocop --skip-brakeman ' \
                     '--skip-docker --skip-jbuilder --skip-dev-gems --skip-bundle'
 
-  GENERATORS = [
-    'layers:use_case gadgets/create',
-    'layers:user_story gadgets/register',
-    'layers:query_object gadgets',
-    'layers:form gadgets/create',
-    'layers:component billing',
-    'layers:graphql_mutation articles/create_article',
-    'layers:graphql_query articles',
-    'layers:graphql_query articles --single',
-    'layers:engine billing_portal',
-    'layers:engine v2 --family api',
-    'layers:api_endpoint orders/create --engine v2',
-  ].freeze
-
-  ENGINES = ['engines/billing_portal', 'apis/v2'].freeze
-
   class << self
     attr_reader :root
 
@@ -43,10 +27,7 @@ class SkeletonApp
       wire_gemfile
       copy_fixtures('app_files')
       run!('bundle install --quiet')
-      run_generators
-      run!('bundle install --quiet')
       copy_fixtures('app_specs')
-      point_slices_at_local_gem
     end
 
     def destroy!
@@ -83,7 +64,6 @@ class SkeletonApp
       File.open(File.join(root, 'Gemfile'), 'a') do |gemfile|
         gemfile.puts
         gemfile.puts "gem 'kaminari'"
-        gemfile.puts "gem 'jsonapi-serializer'"
         gemfile.puts "gem 'layers', git: '#{gem_root}', branch: '#{gem_branch}'"
         gemfile.puts
         gemfile.puts 'group :development, :test do'
@@ -105,24 +85,6 @@ class SkeletonApp
         destination = File.join(root, file.delete_prefix("#{source}/"))
         FileUtils.mkdir_p(File.dirname(destination))
         FileUtils.cp(file, destination)
-      end
-    end
-
-    def run_generators
-      GENERATORS.each { |generator| run!("bin/rails generate #{generator} --quiet") }
-    end
-
-    def point_slices_at_local_gem
-      ENGINES.each do |engine|
-        gemfile = File.join(root, engine, 'Gemfile')
-        patched = File.read(gemfile)
-                      .sub("git: 'git@github.com:DeRiskLabs/layers.git'", "path: '#{gem_root}'")
-        File.write(gemfile, patched)
-      end
-
-      File.open(File.join(root, 'components/billing/Gemfile'), 'a') do |gemfile|
-        gemfile.puts
-        gemfile.puts "gem 'layers', path: '#{gem_root}'"
       end
     end
   end
