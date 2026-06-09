@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The development-time toolchain — generators, the component scaffolder, the
+  RuboCop cops, the `layers:doctor` structure checker, and the skill-sync rake
+  tasks — moved to a separate gem, `layers-scaffold`, installed in the
+  `:development` group. `require 'layers'` no longer loads any of it, and the
+  runtime gem no longer ships a railtie. The `require: layers/rubocop` cop
+  configuration path is unchanged: add `layers-scaffold` to the `:development`
+  group and it keeps working.
+
+### Removed
+
+- `lib/generators/**`, `lib/rubocop/**` (and `layers/rubocop`),
+  `Layers::Doctor`, `Layers::Skills::{Installer,Cloner}`, the `layers:*` rake
+  tasks, and `Layers::Railtie` — all now in `layers-scaffold`.
+
 ## [1.0.0] - 2026-06-03
 
 First standalone release. The gem was previously maintained as an unbuilt copy

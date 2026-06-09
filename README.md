@@ -43,7 +43,7 @@ The gem provides six building blocks:
 - [GraphQL Endpoints](#graphql-endpoints) — declarative mutations and resolvers
 - [Background Jobs](#background-jobs) — jobs as thin boundaries
 - [Registries](#registries) — boot-injected component dependencies
-- [Tooling](#tooling) — generators, the component scaffolder, boundary cops
+- [Tooling](#tooling) — the layers-scaffold gem (generators, cops, doctor, skills)
 - [Configuration and Logging](#configuration-and-logging)
 - [Best Practices](#best-practices)
 - [Error Reference](#error-reference)
@@ -755,137 +755,20 @@ constant's `configure`/`configuration` pair.
 
 ## Tooling
 
-### Generators
-
-Inside a Rails application, generators emit a layer object and its paired pending spec
-in house style:
-
-```bash
-$ bin/rails generate layers:use_case widgets/create      # app/lib/use_cases/widgets/create.rb
-$ bin/rails generate layers:user_story widgets/register  # app/lib/user_stories/widgets/register.rb
-$ bin/rails generate layers:query_object widgets         # app/lib/queries/widgets_query.rb
-$ bin/rails generate layers:form widgets/create          # app/lib/forms/widgets/create_form.rb
-```
-
-Each accepts `--parent` to override the default base class (`ApplicationUseCase`,
-`ApplicationUserStory`, `ApplicationQuery`, `ApplicationForm`).
-
-The engine generator scaffolds a whole mountable slice — gemspec, `engine.rb` in the
-family stance, routes, engine `ApplicationController`, engine-local layer bases, the
-injected use-case/query-object registries with their `Configuration`, a container
-initializer, a standalone spec home (schema-less dummy app), the Gemfile `path` entry,
-and the mount line:
-
-```bash
-$ bin/rails generate layers:engine billing_portal       # feature engine, engines/
-$ bin/rails generate layers:engine v2 --family api       # API engine, apis/
-```
-
-The GraphQL pair generates declarative endpoints into the API engine — the endpoint,
-its engine-local user story (`required :current_authorization` mirroring `user_story_arg`),
-a pending acceptance spec, and the `MutationType`/`QueryType` registration (injected
-when the type file exists, printed otherwise):
-
-```bash
-$ bin/rails generate layers:graphql_mutation articles/create_article
-$ bin/rails generate layers:graphql_query articles            # list resolver, fetch_all story
-$ bin/rails generate layers:graphql_query articles --single   # one-record resolver, fetch story
-```
-
-Both accept `--engine` (default `graph`: files under `apis/graph/`, constants under
-`Graph::`) and `--parent` (defaults `Graph::Mutations::ApplicationMutation` /
-`Graph::Resolvers::ApplicationResolver`).
-
-### Component scaffolder
-
-```bash
-$ bin/rails generate layers:component billing
-```
-
-generates a bounded context as an unbuilt gem under `components/billing/`: gemspec,
-Gemfile, root constant with `configure`/`configuration`, a `RepositoryRegistry`
-subclassing `Layers::BaseRegistry`, the `Configuration` carrying `repo` and the
-registration delegators, version, isolated RSpec scaffold, and a RuboCop config
-inheriting the app's. It also creates `bin/test_components` (runs every component's
-suite in isolation). `components/` sits outside the autoload paths — components are
-consumed through the Gemfile (`path 'components' do gem 'billing' end`), never
-autoloaded.
-
-### Cops
-
-`require: layers/rubocop` loads the gem's custom cops — the boundary cops that enforce
-the direction rules and the house-style layout cop:
-
-```yaml
-require:
-  - layers/rubocop
-
-Layers/UseCaseCallsUserStory:
-  Enabled: true
-Layers/UserStoryOutsideAdapter:
-  Enabled: true
-Layers/SliceReferencesContainerLayer:
-  Enabled: true
-```
-
-- `Layers/UseCaseCallsUserStory` — flags `UserStories::` references inside `use_cases/`
-  files: a use case never calls a user story.
-- `Layers/UserStoryOutsideAdapter` — flags `UserStories::` references outside delivery
-  adapters (controllers, graphql, the stories themselves, specs/tests); tune with
-  `AllowedPaths`.
-- `Layers/SliceReferencesContainerLayer` — flags `UseCases::` / `Queries::` references
-  inside a slice (`engines/`, `apis/`, `components/`): the container owns those layer
-  families, and a slice reaches them through its injected registry, never by name.
-  Tune the slice paths with `SlicePaths`. (Model-constant references inside a slice are
-  not statically detectable — `layers:doctor` and review cover those.)
-
-### layers:doctor
-
-A structure checker for the modular monolith — run `bin/rails layers:doctor`. It reports
-(and exits non-zero on) slices that are not well-formed bounded contexts: an engine, api
-engine, or component missing its own `Gemfile`, not consumed via a `path '<family>' do
-gem '<name>' end` block in the root Gemfile, or missing its `spec/` directory — plus a
-missing `bin/test_suite` when any slice exists.
-- `Layout/PrivateTwoLines` — the house convention of two blank lines before a `private`
-  keyword (autocorrectable). Disable it (`Layout/PrivateTwoLines: { Enabled: false }`)
-  if it is not your style.
-
-### AI agent skills
-
-The derisk skill collections teach AI coding agents the conventions this gem assumes.
-They ship as data-only gems; each depends on the more general collections its skills
-actually reference (`ai-derisk_layers` → `ai-derisk_rails` → `ai-derisk_ruby`), so one
-Gemfile line pulls the full set:
+The development-time toolchain — generators, the component scaffolder, boundary cops,
+the `layers:doctor` structure checker, and the AI agent skill-sync rake tasks — ships
+as a separate gem, **`layers-scaffold`**, installed in the `:development` group:
 
 ```ruby
 group :development do
-  gem 'ai-derisk_layers', require: false
+  gem 'layers-scaffold'
 end
 ```
 
-`ai-derisk_common` (agent workflow behaviour such as commit policy) is deliberately
-standalone — no collection depends on it; add it explicitly if you want it.
-
-Then copy the collections into your project (each lands in its own subdirectory):
-
-```bash
-$ bin/rails layers:sync_skills              # prompts for a destination (default .ai/skills)
-$ bin/rails 'layers:sync_skills[.ai/skills]'
-```
-
-`sync_skills` replaces each collection directory on every run, so the copies track the
-bundled gem versions; re-run it after `bundle update`.
-
-Teams that maintain or contribute to the skills can clone the live repositories instead
-of copying static snapshots — clones pull updates and push fixes back:
-
-```bash
-$ bin/rails 'layers:clone_skills[common_agent_skills]'
-```
-
-`clone_skills` clones each `AI-derisk_*` repository (or fast-forward pulls an existing
-clone). Outside Rails, add `load 'layers/tasks/skills.rake'` to your `Rakefile` to get
-both tasks.
+`require 'layers'` never loads any of it, and the toolchain needs dependencies the
+runtime does not (`railties`, `rubocop`). `layers-scaffold` depends on `layers`, so the
+runtime gem comes with it. See the `layers-scaffold` README for the generator list, the
+`require: layers/rubocop` cop configuration, `layers:doctor`, and the skill-sync tasks.
 
 ## Configuration and Logging
 
