@@ -25,7 +25,5 @@ require 'layers/base_query_object'
 require 'layers/base_job'
 require 'layers/graphql/base_endpoint'
 
-require 'layers/railtie' if defined?(Rails::Railtie)
-
 module Layers
 end
